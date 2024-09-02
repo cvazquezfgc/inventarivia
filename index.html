@@ -5,7 +5,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-layers/dist/leaflet-control-layers.min.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-layers/dist/leaflet-control-layers.min.js"></script>
     <style>
         html, body {
             height: 100%;
@@ -15,6 +17,21 @@
         #map {
             width: 100vw;
             height: 100vh;
+        }
+        /* Estilo adicional para mejorar el diseño del control de capas */
+        .leaflet-control-layers {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .leaflet-control-layers-toggle {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .leaflet-control-layers-overlays label {
+            font-size: 14px;
+            font-weight: 400;
         }
     </style>
 </head>
@@ -67,7 +84,7 @@
         // Agregar una capa base inicial
         openStreetMapLayer.addTo(map);
 
-        // Definir los controles de capas
+        // Definir los controles de capas con diseño moderno
         var baseMaps = {
             "OpenStreetMap": openStreetMapLayer,
             "Google Satellite": googleSatelliteLayer,
