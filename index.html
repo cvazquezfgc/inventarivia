@@ -24,7 +24,6 @@
             padding: 10px;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
             overflow-y: auto;
-            display: none; /* Ocultar el panel por defecto */
             position: absolute;
             bottom: 0;
             left: 0;
@@ -184,21 +183,7 @@
             })
             .catch(error => console.log(error));
 
-        // Ocultar el panel de información cuando se hace clic fuera de él
-        document.addEventListener('click', function(event) {
-            var isClickInsidePanel = document.getElementById('info-panel').contains(event.target);
-            var isClickInsideMap = document.getElementById('map').contains(event.target);
-            if (!isClickInsidePanel && isClickInsideMap) {
-                document.getElementById('info-panel').style.display = 'none';
-                if (highlightedFeature) {
-                    highlightedFeature.setStyle({
-                        color: 'blue', // Restablecer color al hacer clic fuera
-                        weight: 3
-                    });
-                    highlightedFeature = null;
-                }
-            }
-        });
+        // No hacer nada para ocultar el panel al hacer clic fuera
     </script>
 </body>
 </html>
