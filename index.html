@@ -19,7 +19,7 @@
         }).addTo(map);
 
         // Cargar el archivo GeoJSON
-        fetch('C:/Users/cvazquez/Downloads/linies.geojson')
+        fetch('https://github.com/cvazquezfgc/inventarivia/blob/ea69bb005c3cb0f587a743594f13600895e2418b/linies.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data).addTo(map);
