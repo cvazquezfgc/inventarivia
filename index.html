@@ -8,10 +8,15 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        html, body {
+        @font-face {
+            font-family: 'San Francisco';
+            src: url('https://apple-fonts.s3.amazonaws.com/SF-Pro-Display-Semibold.otf') format('opentype');
+        }
+        body, html {
             height: 100%;
             margin: 0;
             overflow: hidden;
+            font-family: 'San Francisco', sans-serif;
         }
         #map {
             width: 100%;
@@ -49,7 +54,17 @@
         .bar text {
             fill: #fff;
             font-size: 12px;
-            font-family: sans-serif;
+            font-family: 'San Francisco', sans-serif;
+        }
+        .y-axis text {
+            font-size: 14px;
+            fill: #fff;
+            font-family: 'San Francisco', sans-serif;
+        }
+        .bar-label {
+            font-size: 14px;
+            fill: #fff;
+            font-family: 'San Francisco', sans-serif;
         }
     </style>
 </head>
@@ -163,7 +178,7 @@
         var sortedLabels = Object.keys(lengthsByLine).sort((a, b) => lengthsByLine[b] - lengthsByLine[a]);
         var sortedData = sortedLabels.map(label => lengthsByLine[label] / 1000); // Convertir a km
 
-        var margin = {top: 20, right: 60, bottom: 20, left: 100},
+        var margin = {top: 20, right: 80, bottom: 20, left: 150},
             width = document.getElementById('chart-container').offsetWidth - margin.left - margin.right,
             height = document.getElementById('chart-container').offsetHeight - margin.top - margin.bottom;
 
@@ -206,7 +221,8 @@
             .attr("class", "y-axis")
             .call(d3.axisLeft(y).tickSize(0))
             .selectAll("text")
-            .attr("fill", "#fff");
+            .attr("fill", "#fff")
+            .call(wrapText, 140);
 
         svg.selectAll(".bar-label")
             .attr("fill", "#fff");
@@ -215,6 +231,30 @@
     function updateChart(selectedLine) {
         d3.selectAll(".bar")
             .attr("fill", d => d === selectedLine ? "yellow" : "#007bff");
+    }
+
+    function wrapText(text, width) {
+        text.each(function() {
+            var text = d3.select(this),
+                words = text.text().split(/\s+/).reverse(),
+                word,
+                line = [],
+                lineNumber = 0,
+                lineHeight = 1.1, // ems
+                y = text.attr("y"),
+                dy = parseFloat(text.attr("dy")),
+                tspan = text.text(null).append("tspan").attr("x", -10).attr("y", y).attr("dy", dy + "em");
+            while (word = words.pop()) {
+                line.push(word);
+                tspan.text(line.join(" "));
+                if (tspan.node().getComputedTextLength() > width) {
+                    line.pop();
+                    tspan.text(line.join(" "));
+                    line = [word];
+                    tspan = text.append("tspan").attr("x", -10).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+                }
+            }
+        });
     }
 </script>
 
