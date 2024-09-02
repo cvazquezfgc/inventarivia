@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Inventari via FGC</title>
-    <meta charset="utf-8" />
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventari via FGC</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         html, body {
             height: 100%;
@@ -15,17 +15,16 @@
         }
         #map {
             width: 100%;
-            height: calc(100% - 200px); /* Espacio para el panel y el gráfico */
+            height: calc(100% - 300px);
             float: left;
         }
         #info-panel {
-            width: 66.66%; /* Dos tercios del ancho del sector inferior */
-            height: 200px; /* Altura del panel */
+            width: 66.66%;
+            height: 300px;
             background-color: #333;
             color: #fff;
             border-top: 2px solid #444;
             padding: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             overflow-y: auto;
             position: absolute;
             bottom: 0;
@@ -33,8 +32,8 @@
             z-index: 1000;
         }
         #chart-container {
-            width: 33.33%; /* Un tercio del ancho del sector inferior */
-            height: 200px;
+            width: 33.33%;
+            height: 300px;
             position: absolute;
             bottom: 0;
             right: 0;
@@ -42,202 +41,157 @@
             background-color: #333;
             border-left: 2px solid #444;
             padding: 10px;
-            overflow-y: auto; /* Permitir desplazamiento vertical */
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 1px solid #444;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #555;
-        }
-        .highlight {
-            color: yellow !important;
-            weight: 3;
-        }
-        .bar {
-            background-color: #007bff;
-            border-color: #0056b3;
-        }
-        .bar.highlight {
-            background-color: yellow;
-            border-color: yellow;
-        }
-        .chartjs-plugin-datalabels {
-            color: #fff; /* Color de las etiquetas de datos */
-        }
-        canvas {
-            background-color: #333; /* Fondo del gráfico */
-        }
-        .chartjs-label {
-            color: #fff; /* Color del texto de las etiquetas */
+            overflow-y: auto;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div id="info-panel">
-        <h2>Información del Elemento</h2>
-        <table id="attributes-table">
-            <thead>
-                <tr>
-                    <th>Campo</th>
-                    <th>Valor</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td colspan="2">Haz clic en un elemento del mapa</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div id="chart-container">
-        <canvas id="lengthChart"></canvas>
-    </div>
-    <script>
-        var map = L.map('map', {
-            center: [41.3879, 2.16992],
-            zoom: 10,
-            maxZoom: 20
-        });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
-        }).addTo(map);
+<div id="map"></div>
+<div id="info-panel">
+    <h2>Información del Elemento</h2>
+    <table id="attributes-table">
+        <thead>
+            <tr>
+                <th>Campo</th>
+                <th>Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="2">Haz clic en un elemento del mapa</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div id="chart-container">
+    <div id="lengthChart"></div>
+</div>
 
-        var geoJsonLayer = null; // Variable para almacenar la capa GeoJSON
-        var highlightedFeature = null; // Variable para almacenar el elemento resaltado
-        var chart = null; // Variable para almacenar el gráfico
+<script>
+    var map = L.map('map', {
+        center: [41.3879, 2.16992],
+        zoom: 10,
+        maxZoom: 20
+    });
 
-        fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
-            .then(response => response.json())
-            .then(data => {
-                var lengthsByLine = {};
-                L.geoJSON(data, {
-                    onEachFeature: function (feature, layer) {
-                        var lineName = feature.properties.LINIA;
-                        var length = 0;
-                        if (layer instanceof L.Polyline) {
-                            length = layer.getLatLngs().reduce((acc, curr, i, arr) => {
-                                if (i > 0) {
-                                    acc += arr[i - 1].distanceTo(curr);
-                                }
-                                return acc;
-                            }, 0);
-                        }
-                        if (!lengthsByLine[lineName]) {
-                            lengthsByLine[lineName] = 0;
-                        }
-                        lengthsByLine[lineName] += length;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
 
-                        layer.on({
-                            click: function (e) {
-                                if (highlightedFeature) {
-                                    highlightedFeature.setStyle({
-                                        color: 'blue',
-                                        weight: 3
-                                    });
-                                }
+    var geoJsonLayer = null;
+    var highlightedFeature = null;
 
-                                e.target.setStyle({
-                                    color: 'yellow',
+    fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
+        .then(response => response.json())
+        .then(data => {
+            var lengthsByLine = {};
+            L.geoJSON(data, {
+                onEachFeature: function (feature, layer) {
+                    var lineName = feature.properties.LINIA;
+                    var length = 0;
+                    if (layer instanceof L.Polyline) {
+                        length = layer.getLatLngs().reduce((acc, curr, i, arr) => {
+                            if (i > 0) {
+                                acc += arr[i - 1].distanceTo(curr);
+                            }
+                            return acc;
+                        }, 0);
+                    }
+                    if (!lengthsByLine[lineName]) {
+                        lengthsByLine[lineName] = 0;
+                    }
+                    lengthsByLine[lineName] += length;
+
+                    layer.on({
+                        click: function (e) {
+                            if (highlightedFeature) {
+                                highlightedFeature.setStyle({
+                                    color: 'blue',
                                     weight: 3
                                 });
-
-                                highlightedFeature = e.target;
-
-                                updateInfoTable(e.target.feature.properties);
-                                updateChart(e.target.feature.properties.LINIA);
                             }
-                        });
-                    }
-                }).addTo(map);
 
-                var sortedLabels = Object.keys(lengthsByLine).sort((a, b) => lengthsByLine[b] - lengthsByLine[a]);
-                var sortedData = sortedLabels.map(label => lengthsByLine[label] / 1000); // Convertir a km
+                            e.target.setStyle({
+                                color: 'yellow',
+                                weight: 3
+                            });
 
-                var ctx = document.getElementById('lengthChart').getContext('2d');
-                chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: sortedLabels,
-                        datasets: [{
-                            label: 'Longitud Total (km)',
-                            data: sortedData,
-                            backgroundColor: '#007bff',
-                            borderColor: '#0056b3',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        plugins: {
-                            datalabels: {
-                                color: '#fff', // Color de las etiquetas de datos
-                                anchor: 'end',
-                                align: 'end',
-                                formatter: function(value) {
-                                    return value.toFixed(2) + ' km';
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                display: true,
-                                grid: {
-                                    display: false
-                                }
-                            },
-                            y: {
-                                display: true,
-                                grid: {
-                                    display: false
-                                }
-                            }
+                            highlightedFeature = e.target;
+
+                            updateInfoTable(e.target.feature.properties);
+                            updateChart(e.target.feature.properties.LINIA);
                         }
-                    }
-                });
-            })
-            .catch(error => console.log(error));
-
-        function updateInfoTable(properties) {
-            var tableBody = document.querySelector('#attributes-table tbody');
-            tableBody.innerHTML = '';
-            for (var key in properties) {
-                if (properties.hasOwnProperty(key)) {
-                    var row = document.createElement('tr');
-                    var cell1 = document.createElement('td');
-                    var cell2 = document.createElement('td');
-                    cell1.textContent = key;
-                    cell2.textContent = properties[key];
-                    row.appendChild(cell1);
-                    row.appendChild(cell2);
-                    tableBody.appendChild(row);
+                    });
                 }
-            }
-            if (tableBody.childElementCount === 0) {
-                tableBody.innerHTML = '<tr><td colspan="2">Haz clic en un elemento del mapa</td></tr>';
+            }).addTo(map);
+
+            var sortedLabels = Object.keys(lengthsByLine).sort((a, b) => lengthsByLine[b] - lengthsByLine[a]);
+            var sortedData = sortedLabels.map(label => lengthsByLine[label] / 1000); // Convertir a km
+
+            var data = [{
+                type: 'bar',
+                x: sortedData,
+                y: sortedLabels,
+                orientation: 'h',
+                marker: {
+                    color: '#007bff'
+                },
+                text: sortedData.map(value => value.toFixed(2) + ' km'),
+                textposition: 'outside',
+                hoverinfo: 'none'
+            }];
+
+            var layout = {
+                margin: { t: 20, r: 40, l: 100, b: 40 },
+                plot_bgcolor: '#333',
+                paper_bgcolor: '#333',
+                font: {
+                    color: '#fff'
+                },
+                xaxis: {
+                    showgrid: false,
+                    zeroline: false,
+                    visible: false
+                },
+                yaxis: {
+                    showgrid: false,
+                    zeroline: false,
+                    tickfont: {
+                        size: 12
+                    }
+                },
+                showlegend: false
+            };
+
+            Plotly.newPlot('lengthChart', data, layout);
+        })
+        .catch(error => console.log(error));
+
+    function updateInfoTable(properties) {
+        var tableBody = document.querySelector('#attributes-table tbody');
+        tableBody.innerHTML = '';
+        for (var key in properties) {
+            if (properties.hasOwnProperty(key)) {
+                var row = document.createElement('tr');
+                var cell1 = document.createElement('td');
+                var cell2 = document.createElement('td');
+                cell1.textContent = key;
+                cell2.textContent = properties[key];
+                row.appendChild(cell1);
+                row.appendChild(cell2);
+                tableBody.appendChild(row);
             }
         }
-
-        function updateChart(selectedLine) {
-            if (!chart) return;
-
-            chart.data.datasets[0].backgroundColor = chart.data.labels.map(label => {
-                return label === selectedLine ? 'yellow' : '#007bff';
-            });
-
-            chart.update();
+        if (tableBody.childElementCount === 0) {
+            tableBody.innerHTML = '<tr><td colspan="2">Haz clic en un elemento del mapa</td></tr>';
         }
-    </script>
+    }
+
+    function updateChart(selectedLine) {
+        Plotly.restyle('lengthChart', 'marker.color', chart.data[0].y.map(label => label === selectedLine ? 'yellow' : '#007bff'));
+    }
+</script>
 </body>
 </html>
