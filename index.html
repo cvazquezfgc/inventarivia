@@ -16,29 +16,6 @@
             width: 100vw;
             height: 100vh;
         }
-        .leaflet-control-layers {
-            display: none; /* Ocultar por defecto */
-            background: white;
-            padding: 6px;
-            border-radius: 5px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-        .leaflet-control-layers-toggle {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #ddd;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            line-height: 40px;
-            text-align: center;
-            font-size: 20px;
-            color: #333;
-            cursor: pointer;
-            z-index: 1000; /* Asegura que el ícono esté por encima del mapa */
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
     </style>
 </head>
 <body>
@@ -100,32 +77,7 @@
             "ICGC topo": topoGrisSimMonICGC
         };
 
-        var layersControl = L.control.layers(baseMaps).addTo(map);
-
-        // Mostrar/ocultar el control de capas
-        var layersControlElement = document.querySelector('.leaflet-control-layers');
-        var layersControlToggle = document.createElement('div');
-        layersControlToggle.className = 'leaflet-control-layers-toggle';
-        layersControlToggle.title = 'Toggle layers control';
-        layersControlToggle.innerHTML = '<i class="fa fa-layer-group"></i>'; // Icono de capas, puedes usar Font Awesome si lo prefieres
-
-        // Insertar el ícono en el mapa
-        map.getContainer().appendChild(layersControlToggle);
-
-        layersControlToggle.addEventListener('click', function() {
-            if (layersControlElement.style.display === 'none' || layersControlElement.style.display === '') {
-                layersControlElement.style.display = 'block';
-            } else {
-                layersControlElement.style.display = 'none';
-            }
-        });
-
-        // Cerrar el control de capas al hacer clic fuera de él
-        document.addEventListener('click', function(event) {
-            if (!layersControlElement.contains(event.target) && !layersControlToggle.contains(event.target)) {
-                layersControlElement.style.display = 'none';
-            }
-        });
+        L.control.layers(baseMaps).addTo(map);
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
