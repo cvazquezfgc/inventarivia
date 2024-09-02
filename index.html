@@ -107,24 +107,40 @@
 
         L.control.layers(baseMaps).addTo(map);
 
+        var geoJsonLayer = null; // Variable para almacenar la capa GeoJSON
+        var highlightedFeature = null; // Variable para almacenar el elemento resaltado
+
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
-                var geoJsonLayer = L.geoJSON(data, {
+                geoJsonLayer = L.geoJSON(data, {
                     style: function(feature) {
                         return {
-                            color: feature.properties._color || 'blue', // Default color
+                            color: 'blue', // Color por defecto
                             weight: 3
                         };
                     },
                     onEachFeature: function (feature, layer) {
                         layer.on({
                             click: function (e) {
+                                // Restablecer el color del elemento previamente resaltado
+                                if (highlightedFeature) {
+                                    highlightedFeature.setStyle({
+                                        color: 'blue', // Color por defecto
+                                        weight: 3
+                                    });
+                                }
+
                                 // Cambiar el color del elemento clicado a amarillo
                                 e.target.setStyle({
                                     color: 'yellow',
                                     weight: 3
                                 });
+
+                                // Actualizar el elemento resaltado
+                                highlightedFeature = e.target;
+
+                                // Actualizar la tabla de atributos
                                 updateInfoTable(e.target.feature.properties);
                             }
                         });
@@ -149,11 +165,6 @@
                     if (tableBody.childElementCount === 0) {
                         tableBody.innerHTML = '<tr><td colspan="2">Haz clic en un elemento del mapa</td></tr>';
                     }
-                }
-
-                function clearInfoTable() {
-                    var tableBody = document.querySelector('#attributes-table tbody');
-                    tableBody.innerHTML = '<tr><td colspan="2">Haz clic en un elemento del mapa</td></tr>';
                 }
             })
             .catch(error => console.log(error));
