@@ -13,15 +13,20 @@
             overflow: hidden; /* Opcional, para evitar barras de desplazamiento */
         }
         #map {
-            width: 100%;
-            height: calc(100% - 200px); /* Ajuste del alto para dejar espacio para la tabla */
+            width: calc(100% - 300px); /* Ajustar el ancho para dejar espacio para el panel */
+            height: 100%;
+            float: right; /* Mover el mapa a la derecha */
         }
-        #info {
-            height: 200px;
-            overflow: auto;
-            background: #f8f9fa;
-            border-top: 1px solid #ccc;
+        #info-panel {
+            width: 300px;
+            height: 100%;
+            float: left; /* Mover el panel a la izquierda */
+            background-color: #fff;
+            border-right: 2px solid #ddd;
             padding: 10px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+            overflow-y: auto;
+            display: none; /* Ocultar el panel por defecto */
         }
         table {
             width: 100%;
@@ -37,11 +42,14 @@
         th {
             background-color: #f2f2f2;
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div id="info">
+    <div id="info-panel">
+        <h2>Información del Elemento</h2>
         <table id="attributes-table">
             <thead>
                 <tr>
@@ -56,6 +64,7 @@
             </tbody>
         </table>
     </div>
+    <div id="map"></div>
     <script>
         var map = L.map('map', {
             center: [41.3879, 2.16992],
@@ -140,6 +149,9 @@
                                 // Actualizar el elemento resaltado
                                 highlightedFeature = e.target;
 
+                                // Mostrar el panel de información
+                                document.getElementById('info-panel').style.display = 'block';
+
                                 // Actualizar la tabla de atributos
                                 updateInfoTable(e.target.feature.properties);
                             }
@@ -168,6 +180,22 @@
                 }
             })
             .catch(error => console.log(error));
+
+        // Ocultar el panel de información cuando se hace clic fuera de él
+        document.addEventListener('click', function(event) {
+            var isClickInsidePanel = document.getElementById('info-panel').contains(event.target);
+            var isClickInsideMap = document.getElementById('map').contains(event.target);
+            if (!isClickInsidePanel && isClickInsideMap) {
+                document.getElementById('info-panel').style.display = 'none';
+                if (highlightedFeature) {
+                    highlightedFeature.setStyle({
+                        color: 'blue', // Restablecer color al hacer clic fuera
+                        weight: 3
+                    });
+                    highlightedFeature = null;
+                }
+            }
+        });
     </script>
 </body>
 </html>
