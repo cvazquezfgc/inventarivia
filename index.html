@@ -39,11 +39,6 @@
             maxZoom: 20 // Ajustar el nivel máximo de zoom para Google Satellite
         });
 
-        var pnoaOrtofotoLayer = L.tileLayer('https://tiles.pnoa.es/pnoa/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.pnoa.es">PNOA</a>',
-            maxZoom: 20 // Ajustar el nivel máximo de zoom para PNOA Ortofoto
-        });
-
         var cartoPositronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>',
             maxZoom: 20 // Ajustar el nivel máximo de zoom para Carto Positron
@@ -60,6 +55,15 @@
             attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
         });
 
+        // Capa PNOA usando WMS
+        var pnoaLayer = L.tileLayer.wms("http://www.ign.es/wms-inspire/pnoa-ma", {
+            layers: "OI.OrthoimageCoverage",
+            format: 'image/jpeg',
+            transparent: false,
+            version: '1.3.0',
+            attribution: "PNOA WMS. Cedido por © Instituto Geográfico Nacional de España"
+        });
+
         // Agregar una capa base inicial
         openStreetMapLayer.addTo(map);
 
@@ -67,7 +71,7 @@
         var baseMaps = {
             "OpenStreetMap": openStreetMapLayer,
             "Google Satellite": googleSatelliteLayer,
-            "PNOA Ortofoto": pnoaOrtofotoLayer,
+            "PNOA Ortofoto": pnoaLayer,
             "Carto Positron": cartoPositronLayer,
             "ICGC orto": ortoHibridaICGC,
             "ICGC topo": topoGrisSimMonICGC
