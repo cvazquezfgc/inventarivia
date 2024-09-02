@@ -69,6 +69,12 @@
             background-color: yellow;
             border-color: yellow;
         }
+        .chartjs-plugin-datalabels {
+            color: #fff; /* Color de las etiquetas de datos */
+        }
+        canvas {
+            background-color: #333; /* Fondo del gráfico */
+        }
     </style>
 </head>
 <body>
@@ -152,14 +158,17 @@
                     }
                 }).addTo(map);
 
+                var sortedLabels = Object.keys(lengthsByLine).sort((a, b) => lengthsByLine[b] - lengthsByLine[a]);
+                var sortedData = sortedLabels.map(label => lengthsByLine[label] / 1000); // Convertir a km
+
                 var ctx = document.getElementById('lengthChart').getContext('2d');
                 chart = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: Object.keys(lengthsByLine),
+                        labels: sortedLabels,
                         datasets: [{
                             label: 'Longitud Total (km)',
-                            data: Object.values(lengthsByLine).map(length => (length / 1000).toFixed(2)),
+                            data: sortedData,
                             backgroundColor: '#007bff',
                             borderColor: '#0056b3',
                             borderWidth: 1
@@ -167,33 +176,27 @@
                     },
                     options: {
                         indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Longitud Total (km)'
-                                },
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + ' km';
-                                    }
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Categorías'
+                        plugins: {
+                            datalabels: {
+                                color: '#fff', // Color de las etiquetas de datos
+                                anchor: 'end',
+                                align: 'end',
+                                formatter: function(value) {
+                                    return value.toFixed(2) + ' km';
                                 }
                             }
                         },
-                        plugins: {
-                            datalabels: {
-                                anchor: 'end',
-                                align: 'end',
-                                color: '#fff',
-                                formatter: function(value) {
-                                    return value + ' km';
+                        scales: {
+                            x: {
+                                display: false,
+                                grid: {
+                                    display: false
+                                }
+                            },
+                            y: {
+                                display: false,
+                                grid: {
+                                    display: false
                                 }
                             }
                         }
