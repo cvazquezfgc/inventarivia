@@ -16,6 +16,22 @@
             width: 100vw;
             height: 100vh;
         }
+        .leaflet-control-layers {
+            display: none; /* Ocultar por defecto */
+        }
+        .leaflet-control-layers-toggle {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+            cursor: pointer;
+            z-index: 1000; /* Asegura que el ícono esté por encima del mapa */
+        }
     </style>
 </head>
 <body>
@@ -31,17 +47,17 @@
         // Definir las capas base
         var openStreetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19 // Ajustar el nivel máximo de zoom para OSM
+            maxZoom: 19
         });
 
         var googleSatelliteLayer = L.tileLayer('http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
             attribution: 'Map data © Google',
-            maxZoom: 20 // Ajustar el nivel máximo de zoom para Google Satellite
+            maxZoom: 20
         });
 
         var cartoPositronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>',
-            maxZoom: 20 // Ajustar el nivel máximo de zoom para Carto Positron
+            maxZoom: 20
         });
 
         // Capas ICGC
@@ -77,7 +93,26 @@
             "ICGC topo": topoGrisSimMonICGC
         };
 
-        L.control.layers(baseMaps).addTo(map);
+        var layersControl = L.control.layers(baseMaps).addTo(map);
+
+        // Controlar la visibilidad del control de capas
+        var layersControlElement = document.querySelector('.leaflet-control-layers');
+        var layersControlToggle = document.querySelector('.leaflet-control-layers-toggle');
+
+        layersControlToggle.addEventListener('click', function() {
+            if (layersControlElement.style.display === 'none' || layersControlElement.style.display === '') {
+                layersControlElement.style.display = 'block';
+            } else {
+                layersControlElement.style.display = 'none';
+            }
+        });
+
+        // Cerrar el control de capas al hacer clic fuera de él
+        document.addEventListener('click', function(event) {
+            if (!layersControlElement.contains(event.target) && !layersControlToggle.contains(event.target)) {
+                layersControlElement.style.display = 'none';
+            }
+        });
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
