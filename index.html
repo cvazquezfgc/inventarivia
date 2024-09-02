@@ -18,16 +18,20 @@
         }
         .leaflet-control-layers {
             display: none; /* Ocultar por defecto */
+            background: white;
+            padding: 6px;
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
         .leaflet-control-layers-toggle {
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid #ddd;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
             text-align: center;
-            font-size: 18px;
+            font-size: 20px;
             color: #333;
             cursor: pointer;
             z-index: 1000; /* Asegura que el ícono esté por encima del mapa */
@@ -95,9 +99,20 @@
 
         var layersControl = L.control.layers(baseMaps).addTo(map);
 
-        // Controlar la visibilidad del control de capas
+        // Mostrar/ocultar el control de capas
         var layersControlElement = document.querySelector('.leaflet-control-layers');
-        var layersControlToggle = document.querySelector('.leaflet-control-layers-toggle');
+        var layersControlToggle = document.createElement('div');
+        layersControlToggle.className = 'leaflet-control-layers-toggle';
+        layersControlToggle.title = 'Toggle layers control';
+        layersControlToggle.innerHTML = '<i class="fa fa-layer-group"></i>'; // Icono de capas, puedes usar Font Awesome si lo prefieres
+
+        // Insertar el ícono en el mapa
+        map.addControl({
+            onAdd: function () {
+                return layersControlToggle;
+            },
+            onRemove: function () {}
+        });
 
         layersControlToggle.addEventListener('click', function() {
             if (layersControlElement.style.display === 'none' || layersControlElement.style.display === '') {
