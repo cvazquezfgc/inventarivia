@@ -34,9 +34,8 @@
             maxZoom: 19 // Ajustar el nivel máximo de zoom para OSM
         });
 
-        var googleSatelliteLayer = L.tileLayer('https://mt{s}.googleusercontent.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        var googleSatelliteLayer = L.tileLayer('http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
             attribution: 'Map data © Google',
-            subdomains: ['0', '1', '2', '3'],
             maxZoom: 20 // Ajustar el nivel máximo de zoom para Google Satellite
         });
 
