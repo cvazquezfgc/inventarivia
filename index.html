@@ -7,30 +7,66 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <style>
-        /* Asegura que el HTML y el cuerpo ocupen todo el espacio de la ventana */
         html, body {
             height: 100%;
             margin: 0;
             overflow: hidden; /* Opcional, para evitar barras de desplazamiento */
         }
-
-        /* Hace que el mapa ocupe todo el espacio disponible */
         #map {
-            width: 100vw;  /* Asegura que el mapa ocupe todo el ancho de la ventana */
-            height: 100vh; /* Asegura que el mapa ocupe todo el alto de la ventana */
+            width: 100vw;
+            height: 100vh;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <script>
-        // Inicializar el mapa centrado en una coordenada específica
-        var map = L.map('map').setView([41.3879, 2.16992], 10);  // Puedes ajustar la latitud y longitud iniciales
+        // Inicializar el mapa
+        var map = L.map('map', {
+            center: [41.3879, 2.16992],
+            zoom: 10
+            // No se establecen minZoom ni maxZoom
+        });
 
-        // Cargar una capa base (OpenStreetMap)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Definir las capas base
+        var openStreetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+        });
+
+        var googleSatelliteLayer = L.tileLayer('https://mt{s}.googleusercontent.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            attribution: 'Map data © Google'
+        });
+
+        var pnoaOrtofotoLayer = L.tileLayer('https://www.pnoa.es/Landsat/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.pnoa.es">PNOA</a>'
+        });
+
+        var cartoPositronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>'
+        });
+
+        var icgcOrtofotoLayer = L.tileLayer('https://geobdd.icgc.cat/tileserver/ortofoto/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.icgc.cat">ICGC</a>'
+        });
+
+        var icgcTopograficoLayer = L.tileLayer('https://geobdd.icgc.cat/tileserver/topografico/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.icgc.cat">ICGC</a>'
+        });
+
+        // Agregar una capa base inicial
+        openStreetMapLayer.addTo(map);
+
+        // Definir los controles de capas
+        var baseMaps = {
+            "OpenStreetMap": openStreetMapLayer,
+            "Google Satellite": googleSatelliteLayer,
+            "PNOA Ortofoto": pnoaOrtofotoLayer,
+            "Carto Positron": cartoPositronLayer,
+            "ICGC Ortofoto": icgcOrtofotoLayer,
+            "ICGC Topográfico": icgcTopograficoLayer
+        };
+
+        L.control.layers(baseMaps).addTo(map);
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
