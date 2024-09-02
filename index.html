@@ -10,13 +10,12 @@
         html, body {
             height: 100%;
             margin: 0;
-            overflow: hidden; /* Opcional, para evitar barras de desplazamiento */
         }
         #map {
             width: 100vw;
             height: 100vh;
         }
-        /* Estilo del control de capas */
+        /* Elimina los estilos personalizados del control de capas */
         .leaflet-control-layers {
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid #ddd;
@@ -24,6 +23,7 @@
             padding: 10px;
             font-family: Arial, sans-serif;
         }
+        /* Asegura que el ícono del control de capas sea visible y funcione */
         .leaflet-control-layers-toggle {
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid #ddd;
@@ -35,26 +35,13 @@
             font-size: 18px;
             color: #333;
             cursor: pointer;
+            z-index: 1000; /* Asegura que el ícono esté por encima del mapa */
         }
-        .leaflet-control-layers-overlays label {
-            font-size: 14px;
-            font-weight: 400;
-            margin: 0;
-            padding: 8px 10px;
-            border-radius: 5px;
+        .leaflet-control-layers-overlays {
+            display: none; /* Oculta el desplegable de opciones por defecto */
+        }
+        .leaflet-control-layers {
             display: block;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .leaflet-control-layers-overlays input[type="radio"],
-        .leaflet-control-layers-overlays input[type="checkbox"] {
-            margin-right: 10px;
-        }
-        .leaflet-control-layers-overlays input:checked + label {
-            background-color: #f0f0f0;
-        }
-        .leaflet-control-layers-overlays label:hover {
-            background-color: #e0e0e0;
         }
     </style>
 </head>
@@ -107,7 +94,7 @@
         // Agregar una capa base inicial
         openStreetMapLayer.addTo(map);
 
-        // Definir los controles de capas con diseño moderno
+        // Definir los controles de capas
         var baseMaps = {
             "OpenStreetMap": openStreetMapLayer,
             "Google Satellite": googleSatelliteLayer,
@@ -130,6 +117,16 @@
                 L.geoJSON(data).addTo(map);
             })
             .catch(error => console.log(error));
+
+        // Mostrar u ocultar el control de capas al hacer clic en el ícono
+        document.querySelector('.leaflet-control-layers-toggle').addEventListener('click', function () {
+            var layersControl = document.querySelector('.leaflet-control-layers');
+            if (layersControl.style.display === 'none' || layersControl.style.display === '') {
+                layersControl.style.display = 'block';
+            } else {
+                layersControl.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
