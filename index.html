@@ -22,12 +22,13 @@
             width: 300px;
             height: 100%;
             background-color: #fff;
-            border-left: 2px solid #ddd;
+            border-top: 2px solid #ddd;
             padding: 10px;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             overflow-y: auto;
             float: left;
             position: relative;
+            display: none; /* Oculto por defecto */
         }
         #chart-container {
             width: 300px;
@@ -100,7 +101,6 @@
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
-                // Agrupar y sumar longitudes por categoría
                 var lengthsByLine = {};
                 L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
@@ -121,54 +121,61 @@
 
                         layer.on({
                             click: function (e) {
-                                // Restablecer el color del elemento previamente resaltado
                                 if (highlightedFeature) {
                                     highlightedFeature.setStyle({
-                                        color: 'blue', // Color por defecto
+                                        color: 'blue',
                                         weight: 3
                                     });
                                 }
 
-                                // Cambiar el color del elemento clicado a amarillo
                                 e.target.setStyle({
                                     color: 'yellow',
                                     weight: 3
                                 });
 
-                                // Actualizar el elemento resaltado
                                 highlightedFeature = e.target;
 
-                                // Mostrar el panel de información
                                 document.getElementById('info-panel').style.display = 'block';
-
-                                // Actualizar la tabla de atributos
                                 updateInfoTable(e.target.feature.properties);
-
-                                // Resaltar la barra correspondiente en el gráfico
                                 updateChart(e.target.feature.properties.LINIA);
                             }
                         });
                     }
                 }).addTo(map);
 
-                // Crear el gráfico
                 var ctx = document.getElementById('lengthChart').getContext('2d');
                 chart = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: Object.keys(lengthsByLine),
                         datasets: [{
-                            label: 'Longitud Total (m)',
-                            data: Object.values(lengthsByLine),
+                            label: 'Longitud Total (km)',
+                            data: Object.values(lengthsByLine).map(length => (length / 1000).toFixed(2)),
                             backgroundColor: '#007bff',
                             borderColor: '#0056b3',
                             borderWidth: 1
                         }]
                     },
                     options: {
+                        indexAxis: 'y',
                         scales: {
                             x: {
-                                beginAtZero: true
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Longitud Total (km)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + ' km';
+                                    }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Categorías'
+                                }
                             }
                         },
                         plugins: {
@@ -177,7 +184,7 @@
                                 align: 'end',
                                 color: '#000',
                                 formatter: function(value) {
-                                    return value + ' m';
+                                    return value + ' km';
                                 }
                             }
                         }
@@ -188,7 +195,7 @@
 
         function updateInfoTable(properties) {
             var tableBody = document.querySelector('#attributes-table tbody');
-            tableBody.innerHTML = ''; // Limpiar tabla
+            tableBody.innerHTML = '';
             for (var key in properties) {
                 if (properties.hasOwnProperty(key)) {
                     var row = document.createElement('tr');
@@ -209,7 +216,6 @@
         function updateChart(selectedLine) {
             if (!chart) return;
 
-            // Actualizar los datos del gráfico
             chart.data.datasets[0].backgroundColor = chart.data.labels.map(label => {
                 return label === selectedLine ? 'yellow' : '#007bff';
             });
