@@ -10,38 +10,11 @@
         html, body {
             height: 100%;
             margin: 0;
+            overflow: hidden; /* Opcional, para evitar barras de desplazamiento */
         }
         #map {
             width: 100vw;
             height: 100vh;
-        }
-        /* Elimina los estilos personalizados del control de capas */
-        .leaflet-control-layers {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            font-family: Arial, sans-serif;
-        }
-        /* Asegura que el ícono del control de capas sea visible y funcione */
-        .leaflet-control-layers-toggle {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #ddd;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
-            text-align: center;
-            font-size: 18px;
-            color: #333;
-            cursor: pointer;
-            z-index: 1000; /* Asegura que el ícono esté por encima del mapa */
-        }
-        .leaflet-control-layers-overlays {
-            display: none; /* Oculta el desplegable de opciones por defecto */
-        }
-        .leaflet-control-layers {
-            display: block;
         }
     </style>
 </head>
@@ -104,11 +77,7 @@
             "ICGC topo": topoGrisSimMonICGC
         };
 
-        var overlays = {}; // Si necesitas agregar capas adicionales
-
-        L.control.layers(baseMaps, overlays, {
-            collapsed: true
-        }).addTo(map);
+        L.control.layers(baseMaps).addTo(map);
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
@@ -117,16 +86,6 @@
                 L.geoJSON(data).addTo(map);
             })
             .catch(error => console.log(error));
-
-        // Mostrar u ocultar el control de capas al hacer clic en el ícono
-        document.querySelector('.leaflet-control-layers-toggle').addEventListener('click', function () {
-            var layersControl = document.querySelector('.leaflet-control-layers');
-            if (layersControl.style.display === 'none' || layersControl.style.display === '') {
-                layersControl.style.display = 'block';
-            } else {
-                layersControl.style.display = 'none';
-            }
-        });
     </script>
 </body>
 </html>
