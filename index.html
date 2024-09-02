@@ -51,7 +51,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td colspan="2">Coloca el cursor sobre un elemento del mapa</td>
+                    <td colspan="2">Haz clic en un elemento del mapa</td>
                 </tr>
             </tbody>
         </table>
@@ -111,13 +111,21 @@
             .then(response => response.json())
             .then(data => {
                 var geoJsonLayer = L.geoJSON(data, {
+                    style: function(feature) {
+                        return {
+                            color: feature.properties._color || 'blue', // Default color
+                            weight: 3
+                        };
+                    },
                     onEachFeature: function (feature, layer) {
                         layer.on({
-                            mouseover: function (e) {
+                            click: function (e) {
+                                // Cambiar el color del elemento clicado a amarillo
+                                e.target.setStyle({
+                                    color: 'yellow',
+                                    weight: 3
+                                });
                                 updateInfoTable(e.target.feature.properties);
-                            },
-                            mouseout: function () {
-                                clearInfoTable();
                             }
                         });
                     }
@@ -139,13 +147,13 @@
                         }
                     }
                     if (tableBody.childElementCount === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="2">Coloca el cursor sobre un elemento del mapa</td></tr>';
+                        tableBody.innerHTML = '<tr><td colspan="2">Haz clic en un elemento del mapa</td></tr>';
                     }
                 }
 
                 function clearInfoTable() {
                     var tableBody = document.querySelector('#attributes-table tbody');
-                    tableBody.innerHTML = '<tr><td colspan="2">Coloca el cursor sobre un elemento del mapa</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="2">Haz clic en un elemento del mapa</td></tr>';
                 }
             })
             .catch(error => console.log(error));
