@@ -5,9 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-layers/dist/leaflet-control-layers.min.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-control-layers/dist/leaflet-control-layers.min.js"></script>
     <style>
         html, body {
             height: 100%;
@@ -18,20 +16,33 @@
             width: 100vw;
             height: 100vh;
         }
-        /* Estilo adicional para mejorar el diseño del control de capas */
+        /* Estilo del control de capas */
         .leaflet-control-layers {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .leaflet-control-layers-toggle {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 8px;
+            padding: 5px;
+            font-family: Arial, sans-serif;
         }
         .leaflet-control-layers-overlays label {
             font-size: 14px;
             font-weight: 400;
+            margin: 0;
+            padding: 5px;
+            border-radius: 5px;
+            display: block;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .leaflet-control-layers-overlays input[type="radio"],
+        .leaflet-control-layers-overlays input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .leaflet-control-layers-overlays input:checked + label {
+            background-color: #f0f0f0;
+        }
+        .leaflet-control-layers-overlays label:hover {
+            background-color: #e0e0e0;
         }
     </style>
 </head>
