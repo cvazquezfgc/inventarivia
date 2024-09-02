@@ -21,14 +21,26 @@
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid #ddd;
             border-radius: 8px;
-            padding: 5px;
+            padding: 10px;
             font-family: Arial, sans-serif;
+        }
+        .leaflet-control-layers-toggle {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+            cursor: pointer;
         }
         .leaflet-control-layers-overlays label {
             font-size: 14px;
             font-weight: 400;
             margin: 0;
-            padding: 5px;
+            padding: 8px 10px;
             border-radius: 5px;
             display: block;
             cursor: pointer;
@@ -105,7 +117,11 @@
             "ICGC topo": topoGrisSimMonICGC
         };
 
-        L.control.layers(baseMaps).addTo(map);
+        var overlays = {}; // Si necesitas agregar capas adicionales
+
+        L.control.layers(baseMaps, overlays, {
+            collapsed: true
+        }).addTo(map);
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
