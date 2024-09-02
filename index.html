@@ -45,12 +45,29 @@
             attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>'
         });
 
-        var icgcOrtofotoLayer = L.tileLayer('https://geobdd.icgc.cat/tileserver/ortofoto/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.icgc.cat">ICGC</a>'
+        var topoMonICGCCache = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-mapa-estandard/MON3857NW/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
         });
 
-        var icgcTopograficoLayer = L.tileLayer('https://betaserver.icgc.cat/vectortiles/bt5mbase_pla.html#11/', {
-            attribution: '&copy; <a href="https://www.icgc.cat">ICGC</a>'
+        var topoMonICGC = L.tileLayer('https://geoserveis.icgc.cat/styles/icgc_mapa_estandard/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
+        });
+
+        var topoGrisMonICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-mapa-base-gris/MON3857NW/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
+        });
+
+        var topoGrisSimMonICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-mapa-base-gris-simplificat/MON3857NW/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
+        });
+
+        var ortoHibridaICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-orto-estandard/MON3857NW/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
         });
 
         // Agregar una capa base inicial
@@ -62,8 +79,11 @@
             "Google Satellite": googleSatelliteLayer,
             "PNOA Ortofoto": pnoaOrtofotoLayer,
             "Carto Positron": cartoPositronLayer,
-            "ICGC Ortofoto": icgcOrtofotoLayer,
-            "ICGC Topográfico": icgcTopograficoLayer
+            "Mapa estandard ICGC cache": topoMonICGCCache,
+            "Orto cache": ortoHibridaICGC,
+            "Mapa estandard gris ICGC cache": topoMonICGC,
+            "Mapa estandard gris simplificat ICGC cache": topoGrisMonICGC,
+            "Mapa estandard gris simplificat ICGC cache": topoGrisSimMonICGC
         };
 
         L.control.layers(baseMaps).addTo(map);
