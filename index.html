@@ -9,66 +9,16 @@
     <style>
         body {
             margin: 0;
-            font-family: 'San Francisco', Arial, sans-serif;
-            background-color: #f8f8f8;
-            color: #333;
+            font-family: Arial, sans-serif;
         }
         #map {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 1; /* Asegurarse de que el mapa esté debajo del panel */
-            height: calc(100vh - 30%); /* Ajustar el alto del mapa para ocupar el espacio restante */
-        }
-        #info-panel {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 30%;
-            background-color: #ffffff;
-            overflow-y: auto;
-            padding: 10px;
-            box-sizing: border-box;
-            color: #333;
-            border-top: 1px solid #ddd;
-            z-index: 2; /* Asegurarse de que el panel esté por encima del mapa */
-            display: none; /* Inicialmente oculto */
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-        td {
-            word-wrap: break-word;
+            height: 100vh; /* El mapa ocupa toda la altura de la ventana */
+            width: 100vw;  /* El mapa ocupa todo el ancho de la ventana */
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="info-panel">
-        <table id="attributes-table">
-            <thead>
-                <tr>
-                    <th>Field</th>
-                    <th>Value</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- La información de atributos se llenará aquí -->
-            </tbody>
-        </table>
-    </div>
     <script>
         // Inicializar el mapa
         var map = L.map('map', {
@@ -123,51 +73,22 @@
 
         L.control.layers(baseMaps).addTo(map);
 
-        var selectedFeature = null;
-
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
-                        layer.on('click', function (e) {
-                            if (selectedFeature) {
-                                selectedFeature.setStyle({ color: '#3388ff' });
+                        layer.on('click', function () {
+                            // Resaltar el elemento seleccionado
+                            if (map.hasLayer(layer)) {
+                                layer.setStyle({ color: 'yellow' });
                             }
-                            selectedFeature = layer;
-                            layer.setStyle({ color: 'yellow' });
-
-                            var attributes = feature.properties;
-                            var table = document.getElementById('attributes-table').getElementsByTagName('tbody')[0];
-                            table.innerHTML = ''; // Limpiar tabla existente
-                            
-                            // Mostrar todos los atributos
-                            for (var key in attributes) {
-                                if (attributes.hasOwnProperty(key)) {
-                                    var row = table.insertRow();
-                                    var cell1 = row.insertCell(0);
-                                    var cell2 = row.insertCell(1);
-                                    cell1.innerHTML = key;
-                                    cell2.innerHTML = attributes[key] || 'N/A';
-                                }
-                            }
-
-                            document.getElementById('info-panel').style.display = 'block';
                         });
                     }
                 }).addTo(map);
-
-                // Deseleccionar elemento al hacer clic fuera
-                map.on('click', function (e) {
-                    if (selectedFeature) {
-                        selectedFeature.setStyle({ color: '#3388ff' });
-                        selectedFeature = null;
-                        document.getElementById('info-panel').style.display = 'none';
-                    }
-                });
             })
-            .catch(error => console.log(error));
+            .catch(error => console.log('Error al cargar el archivo GeoJSON:', error));
     </script>
 </body>
 </html>
