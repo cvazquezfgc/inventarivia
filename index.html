@@ -6,9 +6,7 @@
     <title>Inventari via FGC</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vega@5.21.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.6.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.20.2"></script>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
         body {
             margin: 0;
@@ -19,7 +17,7 @@
         #map {
             position: absolute;
             top: 0;
-            bottom: 0;
+            bottom: 30%;
             right: 0;
             left: 0;
         }
@@ -28,7 +26,7 @@
             bottom: 0;
             left: 0;
             width: 66.66%;
-            max-height: 30%;
+            height: 30%;
             background-color: #2e2e2e;
             overflow-y: auto;
             padding: 10px;
@@ -40,7 +38,7 @@
             bottom: 0;
             right: 0;
             width: 33.33%;
-            max-height: 30%;
+            height: 30%;
             background-color: #2e2e2e;
             color: #fff;
         }
@@ -166,60 +164,60 @@
                     lineLengths[line] += length;
                 });
 
-                // Convertir los datos en un array para Vega-Lite
-                var chartData = [];
+                // Convertir los datos en un array para Google Charts
+                var chartData = [['Línea', 'Longitud (km)', { role: 'style' }, { role: 'annotation' }]];
                 for (var line in lineLengths) {
-                    chartData.push({ line: line, length: lineLengths[line].toFixed(2) + ' km' });
+                    chartData.push([line, parseFloat(lineLengths[line].toFixed(2)), '#3388ff', lineLengths[line].toFixed(2) + ' km']);
                 }
 
                 // Ordenar los datos por longitud en orden descendente
                 chartData.sort(function (a, b) {
-                    return parseFloat(b.length) - parseFloat(a.length);
+                    return b[1] - a[1];
                 });
 
-                // Crear el gráfico con Vega-Lite
-                vegaEmbed('#chart', {
-                    $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
-                    data: { values: chartData },
-                    mark: 'bar',
-                    encoding: {
-                        y: { field: 'line', type: 'nominal', axis: { labelColor: '#fff', labelFontSize: 14 } },
-                        x: { field: 'length', type: 'quantitative', axis: { title: null, labels: false, grid: false } },
-                        text: { field: 'length', type: 'nominal' },
-                        color: { value: '#3388ff' },
-                    },
-                    config: {
-                        background: '#2e2e2e',
-                        view: { stroke: null },
-                        mark: { color: '#3388ff' },
-                        text: { color: '#fff', align: 'left', dx: 3 },
-                    },
-                });
+                // Dibujar el gráfico con Google Charts
+                google.charts.load('current', { packages: ['corechart'] });
+                google.charts.setOnLoadCallback(drawChart);
+
+                function drawChart() {
+                    var data = google.visualization.arrayToDataTable(chartData);
+
+                    var options = {
+                        title: null,
+                        backgroundColor: '#2e2e2e',
+                        legend: { position: 'none' },
+                        hAxis: { textStyle: { color: '#fff' }, gridlines: { color: 'transparent' } },
+                        vAxis: { textStyle: { color: '#fff', fontSize: 14 } },
+                        annotations: {
+                            textStyle: {
+                                fontSize: 14,
+                                color: '#fff'
+                            }
+                        },
+                        bar: { groupWidth: '75%' },
+                        colors: ['#3388ff'],
+                        chartArea: { width: '80%', height: '80%' },
+                    };
+
+                    var chart = new google.visualization.BarChart(document.getElementById('chart'));
+                    chart.draw(data, options);
+
+                    // Guardar el gráfico para uso posterior
+                    window.chart = chart;
+                    window.chartData = data;
+                }
 
                 function updateChartHighlight(selectedLine) {
-                    vegaEmbed('#chart', {
-                        $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
-                        data: { values: chartData },
-                        mark: 'bar',
-                        encoding: {
-                            y: { field: 'line', type: 'nominal', axis: { labelColor: '#fff', labelFontSize: 14 } },
-                            x: { field: 'length', type: 'quantitative', axis: { title: null, labels: false, grid: false } },
-                            text: { field: 'length', type: 'nominal' },
-                            color: {
-                                condition: {
-                                    test: `datum.line === '${selectedLine}'`,
-                                    value: 'yellow'
-                                },
-                                value: '#3388ff'
-                            },
+                    var view = new google.visualization.DataView(window.chartData);
+                    view.setColumns([0, 1, {
+                        calc: function (dt, row) {
+                            return dt.getValue(row, 0) === selectedLine ? 'yellow' : '#3388ff';
                         },
-                        config: {
-                            background: '#2e2e2e',
-                            view: { stroke: null },
-                            mark: { color: '#3388ff' },
-                            text: { color: '#fff', align: 'left', dx: 3 },
-                        },
-                    });
+                        type: 'string',
+                        role: 'style'
+                    }, 3]);
+
+                    window.chart.draw(view);
                 }
             });
     </script>
