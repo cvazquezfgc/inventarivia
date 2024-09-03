@@ -11,8 +11,8 @@
         body {
             margin: 0;
             font-family: 'San Francisco', Arial, sans-serif;
-            background-color: #2e2e2e;
-            color: #fff;
+            background-color: #f8f8f8;
+            color: #333;
         }
         #map {
             position: absolute;
@@ -27,11 +27,13 @@
             left: 0;
             width: 66.66%;
             height: 30%;
-            background-color: #2e2e2e;
+            background-color: #ffffff;
             overflow-y: auto;
             padding: 10px;
             box-sizing: border-box;
-            color: #fff;
+            color: #333;
+            border-top: 1px solid #ddd;
+            display: none;
         }
         #chart {
             position: absolute;
@@ -39,8 +41,10 @@
             right: 0;
             width: 33.33%;
             height: 30%;
-            background-color: #2e2e2e;
-            color: #fff;
+            background-color: #ffffff;
+            color: #333;
+            border-top: 1px solid #ddd;
+            border-left: 1px solid #ddd;
         }
         table {
             width: 100%;
@@ -51,13 +55,19 @@
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
+        .chart-container {
+            height: 100%;
+        }
+        .chart-container .google-visualization {
+            height: 100%;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="info-panel" style="display: none;">
+    <div id="info-panel">
         <table id="attributes-table">
-            <!-- Aquí se llenará la información de atributos -->
+            <!-- La información de atributos se llenará aquí -->
         </table>
     </div>
     <div id="chart"></div>
@@ -73,7 +83,7 @@
         var openStreetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19
-        });
+        }).addTo(map);
 
         var googleSatelliteLayer = L.tileLayer('http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
             attribution: 'Map data © Google',
@@ -93,7 +103,6 @@
             maxZoom: 20
         });
 
-        // Capas ICGC
         var ortoHibridaICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-orto-estandard/MON3857NW/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
@@ -103,9 +112,6 @@
             maxZoom: 19,
             attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
         });
-
-        // Agregar una capa base inicial
-        openStreetMapLayer.addTo(map);
 
         // Definir los controles de capas
         var baseMaps = {
@@ -119,15 +125,15 @@
 
         L.control.layers(baseMaps).addTo(map);
 
-        // Cargar el archivo GeoJSON desde GitHub
         var selectedFeature = null;
 
+        // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
                 var geojsonLayer = L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
-                        layer.on('click', function () {
+                        layer.on('click', function (e) {
                             if (selectedFeature) {
                                 selectedFeature.setStyle({ color: '#3388ff' });
                             }
@@ -144,10 +150,8 @@
                                 cell1.innerHTML = key;
                                 cell2.innerHTML = attributes[key];
                             }
-
                             document.getElementById('info-panel').style.display = 'block';
 
-                            // Resaltar la barra correspondiente en el gráfico
                             updateChartHighlight(attributes.LINIA);
                         });
                     }
@@ -184,19 +188,15 @@
 
                     var options = {
                         title: null,
-                        backgroundColor: '#2e2e2e',
+                        backgroundColor: '#ffffff',
                         legend: { position: 'none' },
-                        hAxis: { textStyle: { color: '#fff' }, gridlines: { color: 'transparent' } },
-                        vAxis: { textStyle: { color: '#fff', fontSize: 14 } },
-                        annotations: {
-                            textStyle: {
-                                fontSize: 14,
-                                color: '#fff'
-                            }
+                        hAxis: { textPosition: 'none' },
+                        vAxis: {
+                            textStyle: { color: '#333', fontSize: 14 },
+                            gridlines: { count: 0 }
                         },
-                        bar: { groupWidth: '75%' },
-                        colors: ['#3388ff'],
-                        chartArea: { width: '80%', height: '80%' },
+                        chartArea: { width: '100%', height: '80%' },
+                        annotations: { alwaysOutside: true, textStyle: { color: '#333', fontSize: 12 } }
                     };
 
                     var chart = new google.visualization.BarChart(document.getElementById('chart'));
@@ -219,7 +219,18 @@
 
                     window.chart.draw(view);
                 }
-            });
+            })
+            .catch(error => console.log(error));
+
+        // Desmarcar elemento al hacer clic fuera
+        map.on('click', function (e) {
+            if (selectedFeature) {
+                selectedFeature.setStyle({ color: '#3388ff' });
+                selectedFeature = null;
+                document.getElementById('info-panel').style.display = 'none';
+                updateChartHighlight(null); // Deseleccionar el gráfico
+            }
+        });
     </script>
 </body>
 </html>
