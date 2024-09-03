@@ -6,7 +6,6 @@
     <title>Inventari via FGC</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             margin: 0;
@@ -17,7 +16,7 @@
         #map {
             position: absolute;
             top: 0;
-            bottom: 30%;
+            bottom: 0;
             right: 0;
             left: 0;
         }
@@ -25,7 +24,7 @@
             position: absolute;
             bottom: 0;
             left: 0;
-            width: 66.66%;
+            width: 100%;
             height: 30%;
             background-color: #ffffff;
             overflow-y: auto;
@@ -34,17 +33,6 @@
             color: #333;
             border-top: 1px solid #ddd;
             display: block; /* Panel siempre visible */
-        }
-        #chart {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 33.33%;
-            height: 30%;
-            background-color: #ffffff;
-            color: #333;
-            border-top: 1px solid #ddd;
-            border-left: 1px solid #ddd;
         }
         table {
             width: 100%;
@@ -55,8 +43,8 @@
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
-        .chart-container {
-            height: 100%;
+        th {
+            background-color: #f4f4f4;
         }
     </style>
 </head>
@@ -64,11 +52,19 @@
     <div id="map"></div>
     <div id="info-panel">
         <table id="attributes-table">
-            <!-- La información de atributos se llenará aquí -->
+            <thead>
+                <tr>
+                    <th>LINIA</th>
+                    <th>TRAM</th>
+                    <th>VIA</th>
+                    <th>gauge</th>
+                    <th>maxspeed</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- La información de atributos se llenará aquí -->
+            </tbody>
         </table>
-    </div>
-    <div id="chart">
-        <canvas id="length-chart"></canvas>
     </div>
     <script>
         // Inicializar el mapa
@@ -130,7 +126,7 @@
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
-                var geojsonLayer = L.geoJSON(data, {
+                L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
                         layer.on('click', function (e) {
                             if (selectedFeature) {
@@ -140,122 +136,29 @@
                             layer.setStyle({ color: 'yellow' });
 
                             var attributes = feature.properties;
-                            var table = document.getElementById('attributes-table');
-                            table.innerHTML = '';
-                            for (var key in attributes) {
+                            var table = document.getElementById('attributes-table').getElementsByTagName('tbody')[0];
+                            table.innerHTML = ''; // Limpiar tabla existente
+                            var fields = ['LINIA', 'TRAM', 'VIA', 'gauge', 'maxspeed'];
+
+                            fields.forEach(function(field) {
                                 var row = table.insertRow();
                                 var cell1 = row.insertCell(0);
                                 var cell2 = row.insertCell(1);
-                                cell1.innerHTML = key;
-                                cell2.innerHTML = attributes[key];
-                            }
-                            document.getElementById('info-panel').style.display = 'block';
+                                cell1.innerHTML = field;
+                                cell2.innerHTML = attributes[field] || 'N/A';
+                            });
 
-                            updateChartHighlight(attributes.LINIA);
+                            document.getElementById('info-panel').style.display = 'block';
                         });
                     }
                 }).addTo(map);
 
-                // Calcular las longitudes totales por línea
-                var lineLengths = {};
-                data.features.forEach(function (feature) {
-                    var line = feature.properties.LINIA;
-                    var length = turf.length(feature, { units: 'kilometers' });
-                    if (!lineLengths[line]) {
-                        lineLengths[line] = 0;
-                    }
-                    lineLengths[line] += length;
-                });
-
-                // Convertir los datos en un array para Chart.js
-                var chartData = [];
-                for (var line in lineLengths) {
-                    chartData.push({
-                        label: line,
-                        data: [lineLengths[line]],
-                        backgroundColor: '#3388ff',
-                        borderColor: '#3388ff',
-                        borderWidth: 1
-                    });
-                }
-
-                // Ordenar los datos por longitud en orden descendente
-                chartData.sort(function (a, b) {
-                    return b.data[0] - a.data[0];
-                });
-
-                // Crear el gráfico con Chart.js
-                var ctx = document.getElementById('length-chart').getContext('2d');
-                var chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: chartData.map(d => d.label),
-                        datasets: [{
-                            label: 'Longitud (km)',
-                            data: chartData.map(d => d.data[0]),
-                            backgroundColor: chartData.map(d => d.backgroundColor),
-                            borderColor: chartData.map(d => d.borderColor),
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + ' km';
-                                    }
-                                }
-                            },
-                            y: {
-                                ticks: {
-                                    autoSkip: false,
-                                    maxRotation: 90,
-                                    minRotation: 90,
-                                    font: {
-                                        size: 14
-                                    }
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(tooltipItem) {
-                                        return tooltipItem.label + ': ' + tooltipItem.raw.toFixed(2) + ' km';
-                                    }
-                                }
-                            }
-                        },
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
-                });
-
-                // Función para actualizar el resaltado del gráfico
-                function updateChartHighlight(selectedLine) {
-                    var updatedData = chartData.map(item => ({
-                        ...item,
-                        backgroundColor: item.label === selectedLine ? 'yellow' : '#3388ff'
-                    }));
-
-                    chart.data.datasets[0].data = updatedData.map(d => d.data[0]);
-                    chart.data.datasets[0].backgroundColor = updatedData.map(d => d.backgroundColor);
-                    chart.update();
-                }
-
-                // Desmarcar elemento al hacer clic fuera
+                // Deseleccionar elemento al hacer clic fuera
                 map.on('click', function (e) {
                     if (selectedFeature) {
                         selectedFeature.setStyle({ color: '#3388ff' });
                         selectedFeature = null;
                         document.getElementById('info-panel').style.display = 'none';
-                        updateChartHighlight(null); // Deseleccionar el gráfico
                     }
                 });
             })
