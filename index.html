@@ -17,8 +17,9 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            right: 0;
             left: 0;
+            right: 0;
+            z-index: 1; /* Asegurarse de que el mapa esté debajo del panel */
         }
         #info-panel {
             position: absolute;
@@ -32,7 +33,8 @@
             box-sizing: border-box;
             color: #333;
             border-top: 1px solid #ddd;
-            display: block; /* Panel siempre visible */
+            z-index: 2; /* Asegurarse de que el panel esté por encima del mapa */
+            display: none; /* Inicialmente oculto */
         }
         table {
             width: 100%;
