@@ -79,22 +79,32 @@
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
-                L.geoJSON(data, {
+                var geojsonLayer = L.geoJSON(data, {
+                    style: function () {
+                        return {
+                            color: '#3388ff', // Color original
+                            weight: 3
+                        };
+                    },
                     onEachFeature: function (feature, layer) {
                         layer.on('click', function (e) {
                             if (selectedFeature) {
-                                selectedFeature.setStyle({ color: '#3388ff' });
+                                geojsonLayer.resetStyle(selectedFeature);
                             }
                             selectedFeature = layer;
                             layer.setStyle({ color: 'yellow' });
+
+                            // Evitar la propagación del clic al mapa y así no deseleccionar inmediatamente
+                            e.target.bringToFront(); // Traer al frente la capa seleccionada
+                            e.originalEvent.stopPropagation();
                         });
                     }
                 }).addTo(map);
 
                 // Deseleccionar elemento al hacer clic fuera
-                map.on('click', function (e) {
+                map.on('click', function () {
                     if (selectedFeature) {
-                        selectedFeature.setStyle({ color: '#3388ff' });
+                        geojsonLayer.resetStyle(selectedFeature);
                         selectedFeature = null;
                     }
                 });
