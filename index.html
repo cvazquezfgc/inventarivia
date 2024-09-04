@@ -80,36 +80,27 @@
             .then(response => response.json())
             .then(data => {
                 var geojsonLayer = L.geoJSON(data, {
-                    style: function () {
-                        return {
-                            color: '#3388ff', // Color original
-                            weight: 3
-                        };
-                    },
                     onEachFeature: function (feature, layer) {
                         layer.on('click', function (e) {
                             if (selectedFeature) {
-                                geojsonLayer.resetStyle(selectedFeature);
+                                selectedFeature.setStyle({ color: '#3388ff' });
                             }
                             selectedFeature = layer;
                             layer.setStyle({ color: 'yellow' });
-
-                            // Evitar la propagación del clic al mapa y así no deseleccionar inmediatamente
-                            e.target.bringToFront(); // Traer al frente la capa seleccionada
-                            e.originalEvent.stopPropagation();
+                            e.originalEvent.stopPropagation(); // Prevenir que el mapa deseleccione
                         });
                     }
                 }).addTo(map);
 
                 // Deseleccionar elemento al hacer clic fuera
-                map.on('click', function () {
+                map.on('click', function (e) {
                     if (selectedFeature) {
-                        geojsonLayer.resetStyle(selectedFeature);
+                        selectedFeature.setStyle({ color: '#3388ff' });
                         selectedFeature = null;
                     }
                 });
             })
-            .catch(error => console.log(error));
+            .catch(error => console.log('Error al cargar el archivo GeoJSON:', error));
     </script>
 </body>
 </html>
