@@ -6,101 +6,257 @@
     <title>Inventari via FGC</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body {
+        @font-face {
+            font-family: 'San Francisco';
+            src: url('https://apple-fonts.s3.amazonaws.com/SF-Pro-Display-Semibold.otf') format('opentype');
+        }
+        body, html {
+            height: 100%;
             margin: 0;
-            font-family: Arial, sans-serif;
+            overflow: hidden;
+            font-family: 'San Francisco', sans-serif;
         }
         #map {
-            height: 100vh; /* El mapa ocupa toda la altura de la ventana */
-            width: 100vw;  /* El mapa ocupa todo el ancho de la ventana */
+            width: 100%;
+            height: calc(100% - 300px);
+            float: left;
+        }
+        #info-panel {
+            width: 66.66%;
+            height: 300px;
+            background-color: #333;
+            color: #fff;
+            border-top: 2px solid #444;
+            padding: 10px;
+            overflow-y: auto;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            z-index: 1000;
+        }
+        #chart-container {
+            width: 33.33%;
+            height: 300px;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            z-index: 1000;
+            background-color: #333;
+            border-left: 2px solid #444;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        .bar {
+            fill: #007bff;
+        }
+        .bar text {
+            fill: #fff;
+            font-size: 12px;
+            font-family: 'San Francisco', sans-serif;
+        }
+        .y-axis text {
+            font-size: 14px;
+            fill: #fff;
+            font-family: 'San Francisco', sans-serif;
+        }
+        .bar-label {
+            font-size: 14px;
+            fill: #fff;
+            font-family: 'San Francisco', sans-serif;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <script>
-        // Inicializar el mapa
-        var map = L.map('map', {
-            center: [41.3879, 2.16992],
-            zoom: 10,
-            maxZoom: 20
-        });
 
-        // Definir las capas base
-        var openStreetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
-        }).addTo(map);
+<div id="map"></div>
+<div id="info-panel">
+    <h2>Información del Elemento</h2>
+    <table id="attributes-table">
+        <thead>
+            <tr>
+                <th>Campo</th>
+                <th>Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="2">Haz clic en un elemento del mapa</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div id="chart-container">
+    <svg id="lengthChart"></svg>
+</div>
 
-        var googleSatelliteLayer = L.tileLayer('http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
-            attribution: 'Map data © Google',
-            maxZoom: 20
-        });
+<script>
+    var map = L.map('map', {
+        center: [41.3879, 2.16992],
+        zoom: 10,
+        maxZoom: 20
+    });
 
-        var pnoaLayer = L.tileLayer.wms('http://www.ign.es/wms-inspire/pnoa-ma', {
-            layers: 'OI.OrthoimageCoverage',
-            format: 'image/png',
-            transparent: false,
-            continuousWorld: true,
-            attribution: 'PNOA cedido por © <a href="http://www.ign.es/ign/main/index.do" target="_blank">Instituto Geográfico Nacional de España</a>'
-        });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
 
-        var cartoPositronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>',
-            maxZoom: 20
-        });
+    var geoJsonLayer = null;
+    var highlightedFeature = null;
 
-        var ortoHibridaICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-orto-estandard/MON3857NW/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
-        });
-
-        var topoGrisSimMonICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-mapa-base-gris-simplificat/MON3857NW/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
-        });
-
-        // Definir los controles de capas
-        var baseMaps = {
-            "OpenStreetMap": openStreetMapLayer,
-            "Google Satellite": googleSatelliteLayer,
-            "PNOA Ortofoto": pnoaLayer,
-            "Carto Positron": cartoPositronLayer,
-            "ICGC orto": ortoHibridaICGC,
-            "ICGC topo": topoGrisSimMonICGC
-        };
-
-        L.control.layers(baseMaps).addTo(map);
-
-        var selectedFeature = null;
-
-        // Cargar el archivo GeoJSON desde GitHub
-        fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
-            .then(response => response.json())
-            .then(data => {
-                var geojsonLayer = L.geoJSON(data, {
-                    onEachFeature: function (feature, layer) {
-                        layer.on('click', function (e) {
-                            if (selectedFeature) {
-                                selectedFeature.setStyle({ color: '#3388ff' });
+    fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
+        .then(response => response.json())
+        .then(data => {
+            var lengthsByLine = {};
+            L.geoJSON(data, {
+                onEachFeature: function (feature, layer) {
+                    var lineName = feature.properties.LINIA;
+                    var length = 0;
+                    if (layer instanceof L.Polyline) {
+                        length = layer.getLatLngs().reduce((acc, curr, i, arr) => {
+                            if (i > 0) {
+                                acc += arr[i - 1].distanceTo(curr);
                             }
-                            selectedFeature = layer;
-                            layer.setStyle({ color: 'yellow' });
-                            e.originalEvent.stopPropagation(); // Prevenir que el mapa deseleccione
-                        });
+                            return acc;
+                        }, 0);
                     }
-                }).addTo(map);
+                    if (!lengthsByLine[lineName]) {
+                        lengthsByLine[lineName] = 0;
+                    }
+                    lengthsByLine[lineName] += length;
 
-                // Deseleccionar elemento al hacer clic fuera
-                map.on('click', function (e) {
-                    if (selectedFeature) {
-                        selectedFeature.setStyle({ color: '#3388ff' });
-                        selectedFeature = null;
-                    }
-                });
-            })
-            .catch(error => console.log('Error al cargar el archivo GeoJSON:', error));
-    </script>
+                    layer.on({
+                        click: function (e) {
+                            if (highlightedFeature) {
+                                highlightedFeature.setStyle({
+                                    color: 'blue',
+                                    weight: 3
+                                });
+                            }
+
+                            e.target.setStyle({
+                                color: 'yellow',
+                                weight: 3
+                            });
+
+                            highlightedFeature = e.target;
+
+                            updateInfoTable(e.target.feature.properties);
+                            updateChart(e.target.feature.properties.LINIA);
+                        }
+                    });
+                }
+            }).addTo(map);
+
+            renderChart(lengthsByLine);
+        })
+        .catch(error => console.log(error));
+
+    function updateInfoTable(properties) {
+        var tableBody = document.querySelector('#attributes-table tbody');
+        tableBody.innerHTML = '';
+        for (var key in properties) {
+            if (properties.hasOwnProperty(key)) {
+                var row = document.createElement('tr');
+                var cell1 = document.createElement('td');
+                var cell2 = document.createElement('td');
+                cell1.textContent = key;
+                cell2.textContent = properties[key];
+                row.appendChild(cell1);
+                row.appendChild(cell2);
+                tableBody.appendChild(row);
+            }
+        }
+        if (tableBody.childElementCount === 0) {
+            tableBody.innerHTML = '<tr><td colspan="2">Haz clic en un elemento del mapa</td></tr>';
+        }
+    }
+
+    function renderChart(lengthsByLine) {
+        var sortedLabels = Object.keys(lengthsByLine).sort((a, b) => lengthsByLine[b] - lengthsByLine[a]);
+        var sortedData = sortedLabels.map(label => lengthsByLine[label] / 1000); // Convertir a km
+
+        var margin = {top: 20, right: 80, bottom: 20, left: 150},
+            width = document.getElementById('chart-container').offsetWidth - margin.left - margin.right,
+            height = document.getElementById('chart-container').offsetHeight - margin.top - margin.bottom;
+
+        var svg = d3.select("#lengthChart")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var y = d3.scaleBand()
+            .domain(sortedLabels)
+            .range([0, height])
+            .padding(0.1);
+
+        var x = d3.scaleLinear()
+            .domain([0, d3.max(sortedData)])
+            .range([0, width]);
+
+        svg.selectAll(".bar")
+            .data(sortedLabels)
+            .enter()
+            .append("rect")
+            .attr("class", "bar")
+            .attr("y", d => y(d))
+            .attr("height", y.bandwidth())
+            .attr("x", 0)
+            .attr("width", d => x(lengthsByLine[d] / 1000));
+
+        svg.selectAll(".bar-label")
+            .data(sortedLabels)
+            .enter()
+            .append("text")
+            .attr("class", "bar-label")
+            .attr("x", d => x(lengthsByLine[d] / 1000) + 5)
+            .attr("y", d => y(d) + y.bandwidth() / 2)
+            .attr("dy", ".35em")
+            .text(d => (lengthsByLine[d] / 1000).toFixed(2) + ' km');
+
+        svg.append("g")
+            .attr("class", "y-axis")
+            .call(d3.axisLeft(y).tickSize(0))
+            .selectAll("text")
+            .attr("fill", "#fff")
+            .call(wrapText, 140);
+
+        svg.selectAll(".bar-label")
+            .attr("fill", "#fff");
+    }
+
+    function updateChart(selectedLine) {
+        d3.selectAll(".bar")
+            .attr("fill", d => d === selectedLine ? "yellow" : "#007bff");
+    }
+
+    function wrapText(text, width) {
+        text.each(function() {
+            var text = d3.select(this),
+                words = text.text().split(/\s+/).reverse(),
+                word,
+                line = [],
+                lineNumber = 0,
+                lineHeight = 1.1, // ems
+                y = text.attr("y"),
+                dy = parseFloat(text.attr("dy")),
+                tspan = text.text(null).append("tspan").attr("x", -10).attr("y", y).attr("dy", dy + "em");
+            while (word = words.pop()) {
+                line.push(word);
+                tspan.text(line.join(" "));
+                if (tspan.node().getComputedTextLength() > width) {
+                    line.pop();
+                    tspan.text(line.join(" "));
+                    line = [word];
+                    tspan = text.append("tspan").attr("x", -10).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+                }
+            }
+        });
+    }
+</script>
+
 </body>
 </html>
