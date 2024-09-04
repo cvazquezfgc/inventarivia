@@ -73,45 +73,33 @@
 
         L.control.layers(baseMaps).addTo(map);
 
-        var selectedLayer = null; // Para almacenar el elemento seleccionado
+        var selectedFeature = null;
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
-                var geojsonLayer = L.geoJSON(data, {
-                    style: function () {
-                        return {
-                            color: '#3388ff',
-                            weight: 3
-                        };
-                    },
+                L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
                         layer.on('click', function (e) {
-                            // Deseleccionar el elemento anterior
-                            if (selectedLayer) {
-                                geojsonLayer.resetStyle(selectedLayer);
+                            if (selectedFeature) {
+                                selectedFeature.setStyle({ color: '#3388ff' });
                             }
-
-                            // Resaltar el nuevo elemento seleccionado
-                            selectedLayer = layer;
+                            selectedFeature = layer;
                             layer.setStyle({ color: 'yellow' });
-
-                            // Evitar la propagación del clic al mapa
-                            e.originalEvent.stopPropagation();
                         });
                     }
                 }).addTo(map);
 
-                // Deseleccionar si se hace clic fuera de un elemento
-                map.on('click', function () {
-                    if (selectedLayer) {
-                        geojsonLayer.resetStyle(selectedLayer);
-                        selectedLayer = null;
+                // Deseleccionar elemento al hacer clic fuera
+                map.on('click', function (e) {
+                    if (selectedFeature) {
+                        selectedFeature.setStyle({ color: '#3388ff' });
+                        selectedFeature = null;
                     }
                 });
             })
-            .catch(error => console.log('Error al cargar el archivo GeoJSON:', error));
+            .catch(error => console.log(error));
     </script>
 </body>
 </html>
