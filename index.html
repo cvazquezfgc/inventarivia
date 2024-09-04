@@ -11,64 +11,16 @@
             margin: 0;
             font-family: Arial, sans-serif;
         }
-
         #map {
             height: 100vh; /* El mapa ocupa toda la altura de la ventana */
             width: 100vw;  /* El mapa ocupa todo el ancho de la ventana */
-        }
-
-        #info-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
-            padding: 10px;
-            max-height: 150px;
-            overflow-y: auto;
-            display: none; /* El panel está oculto por defecto */
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f2f2f2;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="info-panel">
-        <table>
-            <thead>
-                <tr>
-                    <th>LINIA</th>
-                    <th>TRAM</th>
-                    <th>VIA</th>
-                    <th>Gauge</th>
-                    <th>Max Speed</th>
-                </tr>
-            </thead>
-            <tbody id="info-table">
-                <!-- Los valores se insertarán aquí dinámicamente -->
-            </tbody>
-        </table>
-    </div>
     <script>
+        // Inicializar el mapa
         var map = L.map('map', {
             center: [41.3879, 2.16992],
             zoom: 10,
@@ -109,6 +61,7 @@
             attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
         });
 
+        // Definir los controles de capas
         var baseMaps = {
             "OpenStreetMap": openStreetMapLayer,
             "Google Satellite": googleSatelliteLayer,
@@ -120,7 +73,7 @@
 
         L.control.layers(baseMaps).addTo(map);
 
-        var selectedLayer = null;
+        var selectedLayer = null; // Para almacenar la capa seleccionada
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
@@ -129,43 +82,26 @@
                 var geojsonLayer = L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
                         layer.on('click', function (e) {
-                            // Deseleccionar el elemento anterior si existe
+                            // Deseleccionar la capa anterior
                             if (selectedLayer) {
                                 geojsonLayer.resetStyle(selectedLayer);
                             }
 
-                            // Seleccionar el nuevo elemento
+                            // Resaltar la capa seleccionada
                             selectedLayer = layer;
                             layer.setStyle({ color: 'yellow' });
 
-                            // Mostrar los valores en el panel de información
-                            var infoPanel = document.getElementById('info-panel');
-                            var infoTable = document.getElementById('info-table');
-                            infoTable.innerHTML = `
-                                <tr>
-                                    <td>${feature.properties.LINIA}</td>
-                                    <td>${feature.properties.TRAM}</td>
-                                    <td>${feature.properties.VIA}</td>
-                                    <td>${feature.properties.gauge}</td>
-                                    <td>${feature.properties.maxspeed}</td>
-                                </tr>
-                            `;
-                            infoPanel.style.display = 'block';
+                            // Evitar la propagación del clic al mapa
+                            e.originalEvent.stopPropagation();
                         });
                     }
                 }).addTo(map);
 
                 // Deseleccionar si se hace clic fuera de un elemento
-                map.on('click', function (e) {
+                map.on('click', function () {
                     if (selectedLayer) {
                         geojsonLayer.resetStyle(selectedLayer);
                         selectedLayer = null;
-
-                        // Ocultar el panel de información
-                        var infoPanel = document.getElementById('info-panel');
-                        var infoTable = document.getElementById('info-table');
-                        infoTable.innerHTML = ''; // Vaciar la tabla
-                        infoPanel.style.display = 'none'; // Ocultar el panel
                     }
                 });
             })
