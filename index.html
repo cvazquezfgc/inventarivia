@@ -73,21 +73,27 @@
 
         L.control.layers(baseMaps).addTo(map);
 
-        var selectedLayer = null; // Para almacenar la capa seleccionada
+        var selectedLayer = null; // Para almacenar el elemento seleccionado
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
                 var geojsonLayer = L.geoJSON(data, {
+                    style: function () {
+                        return {
+                            color: '#3388ff',
+                            weight: 3
+                        };
+                    },
                     onEachFeature: function (feature, layer) {
                         layer.on('click', function (e) {
-                            // Deseleccionar la capa anterior
+                            // Deseleccionar el elemento anterior
                             if (selectedLayer) {
                                 geojsonLayer.resetStyle(selectedLayer);
                             }
 
-                            // Resaltar la capa seleccionada
+                            // Resaltar el nuevo elemento seleccionado
                             selectedLayer = layer;
                             layer.setStyle({ color: 'yellow' });
 
