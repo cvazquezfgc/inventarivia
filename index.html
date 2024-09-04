@@ -8,207 +8,183 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
     <style>
-        body {
+        body, html {
             margin: 0;
+            height: 100%;
+            overflow: hidden; /* Eliminar las barras de desplazamiento */
             font-family: Arial, sans-serif;
         }
-
         #map {
-            height: 100vh;
-            width: 100vw;
+            height: 100%; /* El mapa ocupa toda la altura de la ventana */
+            width: 100%;  /* El mapa ocupa todo el ancho de la ventana */
         }
-
-        #attributes-table {
+        #info {
             position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
+            bottom: 0;
+            left: 0;
+            width: 300px;
+            background-color: rgba(255, 255, 255, 0.9);
             border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            max-height: 200px;
-            max-width: 300px;
+            padding: 10px;
+            font-size: 14px;
             z-index: 1000;
         }
-
-        #attributes-table table {
+        #info table {
             width: 100%;
             border-collapse: collapse;
         }
-
-        #attributes-table th, #attributes-table td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .leaflet-popup-content-wrapper {
-            padding: 0;
-            border-radius: 8px;
-        }
-
-        .leaflet-popup-content {
-            margin: 0;
-            padding: 8px;
-        }
-
-        .leaflet-popup-content td {
-            font-size: 12px;
+        #info th, #info td {
             padding: 4px;
+            text-align: left;
         }
-
-        .distance-label {
-            position: absolute;
-            color: green;
-            background-color: white;
-            border: 2px solid green;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 14px;
-            line-height: 16px;
-            text-align: center;
-            pointer-events: none;
-            z-index: 1000;
-            white-space: nowrap;
+        #info th {
+            background-color: #f4f4f4;
+        }
+        .highlighted {
+            color: yellow;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="attributes-table">
+    <div id="info">
         <table>
-            <thead>
-                <tr>
-                    <th>Campo</th>
-                    <th>Valor</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
+            <tr><th>Campo</th><th>Valor</th></tr>
+            <tr><td>LINIA</td><td id="info-linia"></td></tr>
+            <tr><td>TRAM</td><td id="info-tram"></td></tr>
+            <tr><td>VIA</td><td id="info-via"></td></tr>
+            <tr><td>Gauge</td><td id="info-gauge"></td></tr>
+            <tr><td>Maxspeed</td><td id="info-maxspeed"></td></tr>
+            <tr><td>Voltage</td><td id="info-voltage"></td></tr>
         </table>
     </div>
     <script>
+        // Inicializar el mapa
         var map = L.map('map', {
             center: [41.3879, 2.16992],
             zoom: 10,
             maxZoom: 20
         });
 
+        // Definir las capas base
         var openStreetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19
         }).addTo(map);
 
-        var baseMaps = {
-            "OpenStreetMap": openStreetMapLayer
-        };
-
-        L.control.layers(baseMaps).addTo(map);
-
         var selectedFeature = null;
+        var cursorMarker = null;
+        var distanceMarker = null;
 
-        // Cargar el archivo GeoJSON
+        // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
-                var lineLayers = L.geoJSON(data, {
-                    style: function () {
-                        return { color: '#808080' }; // gris claro para las líneas
+                var geojsonLayer = L.geoJSON(data, {
+                    style: function (feature) {
+                        return {
+                            color: '#555555', // Gris oscuro para las líneas
+                            weight: 3
+                        };
                     },
                     onEachFeature: function (feature, layer) {
-                        layer.on('click', function () {
+                        layer.on('click', function (e) {
                             if (selectedFeature) {
-                                selectedFeature.setStyle({ color: '#808080' }); // deseleccionar (gris claro)
+                                selectedFeature.setStyle({ color: '#555555' }); // Cambiar a gris oscuro
                             }
                             selectedFeature = layer;
-                            layer.setStyle({ color: 'yellow' }); // seleccionar (amarillo)
-                            updateTable(feature.properties);
-                        });
+                            layer.setStyle({ color: 'yellow' }); // Resaltar en amarillo
 
-                        layer.on('mousemove', function (e) {
-                            var latlng = e.latlng;
-                            var closestPoint = layer.closestLayerPoint(map.latLngToLayerPoint(latlng));
-                            var distance = calculateDistance(feature.geometry.coordinates, map.layerPointToLatLng(closestPoint));
+                            updateInfo(feature.properties); // Actualizar la tabla de información
 
-                            updateDynamicTable(feature.properties, distance);
-                            updateDistanceLabel(latlng, distance);
+                            // Detener la actualización dinámica mientras está seleccionado
+                            map.off('mousemove', onMapMouseMove);
                         });
                     }
                 }).addTo(map);
+
+                // Deseleccionar elemento al hacer clic fuera
+                map.on('click', function (e) {
+                    if (selectedFeature) {
+                        selectedFeature.setStyle({ color: '#555555' });
+                        selectedFeature = null;
+
+                        // Reanudar la actualización dinámica
+                        map.on('mousemove', onMapMouseMove);
+                    }
+                });
+
+                function onMapMouseMove(e) {
+                    var closestPoint = null;
+                    var minDistance = Infinity;
+
+                    geojsonLayer.eachLayer(function (layer) {
+                        var line = turf.lineString(layer.feature.geometry.coordinates);
+                        var point = turf.point([e.latlng.lng, e.latlng.lat]);
+                        var snapped = turf.nearestPointOnLine(line, point);
+                        var distance = turf.distance(turf.point(line.geometry.coordinates[0]), snapped, { units: 'kilometers' });
+
+                        if (snapped.properties.dist <= 0.01 && snapped.properties.dist < minDistance) { // 0.01 approx 1 km radius
+                            closestPoint = snapped;
+                            minDistance = snapped.properties.dist;
+                        }
+                    });
+
+                    if (closestPoint) {
+                        var latlng = L.latLng(closestPoint.geometry.coordinates[1], closestPoint.geometry.coordinates[0]);
+
+                        if (!cursorMarker) {
+                            cursorMarker = L.circleMarker(latlng, {
+                                radius: 6,
+                                color: 'green',
+                                weight: 2,
+                                fillOpacity: 1
+                            }).addTo(map);
+                        } else {
+                            cursorMarker.setLatLng(latlng);
+                        }
+
+                        if (!distanceMarker) {
+                            distanceMarker = L.marker(latlng, {
+                                icon: L.divIcon({
+                                    className: 'highlighted',
+                                    html: '<div>' + minDistance.toFixed(2) + ' km</div>',
+                                    iconAnchor: [-20, 15]
+                                })
+                            }).addTo(map);
+                        } else {
+                            distanceMarker.setLatLng(latlng);
+                            distanceMarker._icon.innerHTML = '<div>' + minDistance.toFixed(2) + ' km</div>';
+                        }
+
+                        // Actualizar la tabla de información con la distancia
+                        updateDynamicDistance(minDistance);
+                    }
+                }
+
+                map.on('mousemove', onMapMouseMove);
+
+                function updateInfo(properties) {
+                    document.getElementById('info-linia').textContent = properties.LINIA || '';
+                    document.getElementById('info-tram').textContent = properties.TRAM || '';
+                    document.getElementById('info-via').textContent = properties.VIA || '';
+                    document.getElementById('info-gauge').textContent = properties.gauge || '';
+                    document.getElementById('info-maxspeed').textContent = properties.maxspeed || '';
+                    document.getElementById('info-voltage').textContent = properties.voltage || '';
+                }
+
+                function updateDynamicDistance(distance) {
+                    if (!selectedFeature) {
+                        document.getElementById('info-linia').textContent = 'Distancia';
+                        document.getElementById('info-tram').textContent = distance.toFixed(2) + ' km';
+                        document.getElementById('info-via').textContent = '';
+                        document.getElementById('info-gauge').textContent = '';
+                        document.getElementById('info-maxspeed').textContent = '';
+                        document.getElementById('info-voltage').textContent = '';
+                    }
+                }
             })
             .catch(error => console.log(error));
-
-        function calculateDistance(coords, latlng) {
-            var line = turf.lineString(coords);
-            var pt = turf.point([latlng.lng, latlng.lat]);
-            var distance = turf.pointToLineDistance(pt, line, { units: 'meters' });
-            return distance;
-        }
-
-        function updateTable(properties) {
-            var tableBody = document.querySelector('#attributes-table tbody');
-            tableBody.innerHTML = '';
-
-            for (var key in properties) {
-                if (properties.hasOwnProperty(key)) {
-                    var row = document.createElement('tr');
-                    var cell1 = document.createElement('td');
-                    var cell2 = document.createElement('td');
-                    cell1.textContent = key;
-                    cell2.textContent = properties[key];
-                    row.appendChild(cell1);
-                    row.appendChild(cell2);
-                    tableBody.appendChild(row);
-                }
-            }
-        }
-
-        function updateDynamicTable(properties, distance) {
-            var tableBody = document.querySelector('#attributes-table tbody');
-            tableBody.innerHTML = '';
-
-            for (var key in properties) {
-                if (properties.hasOwnProperty(key)) {
-                    var row = document.createElement('tr');
-                    var cell1 = document.createElement('td');
-                    var cell2 = document.createElement('td');
-                    cell1.textContent = key;
-                    cell2.textContent = properties[key];
-                    row.appendChild(cell1);
-                    row.appendChild(cell2);
-                    tableBody.appendChild(row);
-                }
-            }
-
-            var distanceRow = document.createElement('tr');
-            var distanceCell1 = document.createElement('td');
-            var distanceCell2 = document.createElement('td');
-            distanceCell1.textContent = 'Distancia desde el inicio';
-            distanceCell2.textContent = `${distance.toFixed(2)} m`;
-            distanceRow.appendChild(distanceCell1);
-            distanceRow.appendChild(distanceCell2);
-            tableBody.appendChild(distanceRow);
-        }
-
-        function updateDistanceLabel(latlng, distance) {
-            var label = document.querySelector('.distance-label');
-            if (!label) {
-                label = document.createElement('div');
-                label.className = 'distance-label';
-                document.body.appendChild(label);
-            }
-            label.style.left = (latlng.containerPoint.x + 15) + 'px';
-            label.style.top = (latlng.containerPoint.y - 15) + 'px';
-            label.textContent = `${distance.toFixed(2)} m`;
-        }
-
-        map.on('click', function (e) {
-            if (selectedFeature) {
-                selectedFeature.setStyle({ color: '#808080' }); // deseleccionar (gris claro)
-                selectedFeature = null;
-                document.querySelector('.distance-label').style.display = 'none';
-            }
-        });
     </script>
 </body>
 </html>
