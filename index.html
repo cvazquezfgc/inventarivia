@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventari via FGC</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -18,226 +18,134 @@
             width: 100vw;
         }
 
-        #info-panel {
+        #attributes-table {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
             border-radius: 8px;
-            width: 300px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
             max-height: 200px;
-            overflow-y: auto;
+            max-width: 300px;
             z-index: 1000;
         }
 
-        table {
+        #attributes-table table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        th, td {
-            padding: 5px;
-            border-bottom: 1px solid #ddd;
+        #attributes-table th, #attributes-table td {
+            padding: 8px;
             text-align: left;
+            border-bottom: 1px solid #ddd;
         }
 
-        th {
-            background-color: #f2f2f2;
+        .leaflet-popup-content-wrapper {
+            padding: 0;
+            border-radius: 8px;
         }
 
-        .dynamic-tooltip {
-            background-color: rgba(0, 128, 0, 0.8);
-            color: white;
-            border-radius: 4px;
-            padding: 2px 6px;
+        .leaflet-popup-content {
+            margin: 0;
+            padding: 8px;
+        }
+
+        .leaflet-popup-content td {
             font-size: 12px;
+            padding: 4px;
+        }
+
+        .distance-label {
+            position: absolute;
+            color: green;
+            background-color: white;
+            border: 2px solid green;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 14px;
+            line-height: 16px;
+            text-align: center;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
         }
     </style>
 </head>
-
 <body>
     <div id="map"></div>
-    <div id="info-panel">
-        <table id="attributes-table">
+    <div id="attributes-table">
+        <table>
             <thead>
                 <tr>
                     <th>Campo</th>
                     <th>Valor</th>
                 </tr>
             </thead>
-            <tbody>
-                <!-- Aquí se mostrarán dinámicamente los valores -->
-            </tbody>
+            <tbody></tbody>
         </table>
     </div>
-
     <script>
-        // Inicializar el mapa
         var map = L.map('map', {
             center: [41.3879, 2.16992],
             zoom: 10,
             maxZoom: 20
         });
 
-        // Definir las capas base
         var openStreetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19
         }).addTo(map);
 
-        var googleSatelliteLayer = L.tileLayer('http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
-            attribution: 'Map data © Google',
-            maxZoom: 20
-        });
-
-        var pnoaLayer = L.tileLayer.wms('http://www.ign.es/wms-inspire/pnoa-ma', {
-            layers: 'OI.OrthoimageCoverage',
-            format: 'image/png',
-            transparent: false,
-            continuousWorld: true,
-            attribution: 'PNOA cedido por © <a href="http://www.ign.es/ign/main/index.do" target="_blank">Instituto Geográfico Nacional de España</a>'
-        });
-
-        var cartoPositronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>',
-            maxZoom: 20
-        });
-
-        var ortoHibridaICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-orto-estandard/MON3857NW/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
-        });
-
-        var topoGrisSimMonICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-mapa-base-gris-simplificat/MON3857NW/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
-        });
-
-        // Definir los controles de capas
         var baseMaps = {
-            "OpenStreetMap": openStreetMapLayer,
-            "Google Satellite": googleSatelliteLayer,
-            "PNOA Ortofoto": pnoaLayer,
-            "Carto Positron": cartoPositronLayer,
-            "ICGC orto": ortoHibridaICGC,
-            "ICGC topo": topoGrisSimMonICGC
+            "OpenStreetMap": openStreetMapLayer
         };
 
         L.control.layers(baseMaps).addTo(map);
 
-        var highlightedFeature = null;
+        var selectedFeature = null;
 
-        // Cargar el archivo GeoJSON desde GitHub
+        // Cargar el archivo GeoJSON
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
-                L.geoJSON(data, {
-                    style: function (feature) {
-                        return {
-                            color: '#777',  // Gris claro
-                            weight: 3
-                        };
+                var lineLayers = L.geoJSON(data, {
+                    style: function () {
+                        return { color: '#808080' }; // gris claro para las líneas
                     },
                     onEachFeature: function (feature, layer) {
-                        var lineName = feature.properties.LINIA;
-
-                        if (layer instanceof L.Polyline) {
-                            length = layer.getLatLngs().reduce((acc, curr, i, arr) => {
-                                if (i > 0) {
-                                    acc += arr[i - 1].distanceTo(curr);
-                                }
-                                return acc;
-                            }, 0);
-                        }
-
-                        layer.on({
-                            click: function (e) {
-                                if (highlightedFeature) {
-                                    highlightedFeature.setStyle({
-                                        color: '#777',  // Gris claro
-                                        weight: 3
-                                    });
-                                }
-
-                                e.target.setStyle({
-                                    color: 'yellow',
-                                    weight: 3
-                                });
-
-                                highlightedFeature = e.target;
-
-                                updateInfoTable(e.target.feature.properties);
-                                map.off('mousemove');
-                            },
-                            mousemove: function (e) {
-                                if (highlightedFeature) return;
-
-                                if (['Barcelona-Valles', 'Llobregat-Anoia'].includes(feature.properties.LINIA)) {
-                                    showDynamicCursor(e.latlng, layer);
-
-                                    var distance = calculateDistanceFromStart(e.latlng, layer);
-                                    updateDynamicTable(feature.properties, distance);
-                                }
+                        layer.on('click', function () {
+                            if (selectedFeature) {
+                                selectedFeature.setStyle({ color: '#808080' }); // deseleccionar (gris claro)
                             }
+                            selectedFeature = layer;
+                            layer.setStyle({ color: 'yellow' }); // seleccionar (amarillo)
+                            updateTable(feature.properties);
+                        });
+
+                        layer.on('mousemove', function (e) {
+                            var latlng = e.latlng;
+                            var closestPoint = layer.closestLayerPoint(map.latLngToLayerPoint(latlng));
+                            var distance = calculateDistance(feature.geometry.coordinates, map.layerPointToLatLng(closestPoint));
+
+                            updateDynamicTable(feature.properties, distance);
+                            updateDistanceLabel(latlng, distance);
                         });
                     }
                 }).addTo(map);
-
-                map.on('click', function (e) {
-                    if (highlightedFeature) {
-                        highlightedFeature.setStyle({
-                            color: '#777',  // Gris claro
-                            weight: 3
-                        });
-                        highlightedFeature = null;
-                        map.on('mousemove');  // Reactivar el mousemove
-                    }
-                });
             })
             .catch(error => console.log(error));
 
-        function calculateDistanceFromStart(latlng, layer) {
-            var latLngs = layer.getLatLngs();
-            var totalDistance = 0;
-            var cursorDistance = 0;
-
-            for (var i = 0; i < latLngs.length - 1; i++) {
-                var segmentStart = latLngs[i];
-                var segmentEnd = latLngs[i + 1];
-                var segmentDistance = segmentStart.distanceTo(segmentEnd);
-
-                if (L.GeometryUtil.belongsSegment(latlng, segmentStart, segmentEnd)) {
-                    cursorDistance = totalDistance + L.GeometryUtil.length([segmentStart, latlng]);
-                    break;
-                }
-
-                totalDistance += segmentDistance;
-            }
-
-            return cursorDistance;
+        function calculateDistance(coords, latlng) {
+            var line = turf.lineString(coords);
+            var pt = turf.point([latlng.lng, latlng.lat]);
+            var distance = turf.pointToLineDistance(pt, line, { units: 'meters' });
+            return distance;
         }
 
-        function showDynamicCursor(latlng, layer) {
-            if (!map._dynamicCursor) {
-                map._dynamicCursor = L.circleMarker(latlng, {
-                    radius: 6,
-                    color: 'green',  // Color verde
-                    fillOpacity: 0.9
-                }).addTo(map);
-            } else {
-                map._dynamicCursor.setLatLng(latlng);
-            }
-
-            var distance = calculateDistanceFromStart(latlng, layer);
-            map._dynamicCursor.bindTooltip(`Distancia: ${distance.toFixed(2)} m`, {
-                permanent: true,
-                className: 'dynamic-tooltip',
-                offset: [10, 0]
-            }).openTooltip();
-        }
-
-        function updateInfoTable(properties) {
+        function updateTable(properties) {
             var tableBody = document.querySelector('#attributes-table tbody');
             tableBody.innerHTML = '';
 
@@ -281,7 +189,26 @@
             distanceRow.appendChild(distanceCell2);
             tableBody.appendChild(distanceRow);
         }
+
+        function updateDistanceLabel(latlng, distance) {
+            var label = document.querySelector('.distance-label');
+            if (!label) {
+                label = document.createElement('div');
+                label.className = 'distance-label';
+                document.body.appendChild(label);
+            }
+            label.style.left = (latlng.containerPoint.x + 15) + 'px';
+            label.style.top = (latlng.containerPoint.y - 15) + 'px';
+            label.textContent = `${distance.toFixed(2)} m`;
+        }
+
+        map.on('click', function (e) {
+            if (selectedFeature) {
+                selectedFeature.setStyle({ color: '#808080' }); // deseleccionar (gris claro)
+                selectedFeature = null;
+                document.querySelector('.distance-label').style.display = 'none';
+            }
+        });
     </script>
 </body>
-
 </html>
