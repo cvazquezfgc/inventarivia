@@ -110,7 +110,10 @@
         .then(response => response.json())
         .then(data => {
             var lengthsByLine = {};
-            L.geoJSON(data, {
+            geoJsonLayer = L.geoJSON(data, {
+                style: function (feature) {
+                    return { color: '#333', weight: 3 };
+                },
                 onEachFeature: function (feature, layer) {
                     var lineName = feature.properties.LINIA;
                     var length = 0;
@@ -131,7 +134,7 @@
                         click: function (e) {
                             if (highlightedFeature) {
                                 highlightedFeature.setStyle({
-                                    color: 'blue',
+                                    color: '#333',
                                     weight: 3
                                 });
                             }
@@ -145,6 +148,12 @@
 
                             updateInfoTable(e.target.feature.properties);
                             updateChart(e.target.feature.properties.LINIA);
+                        },
+                        mousemove: function(e) {
+                            // Código para mostrar el cursor redondo y calcular la distancia
+                            if (['Barcelona-Valles', 'Llobregat-Anoia'].includes(feature.properties.LINIA)) {
+                                showDynamicCursor(e.latlng, layer);
+                            }
                         }
                     });
                 }
@@ -243,7 +252,8 @@
                 lineHeight = 1.1, // ems
                 y = text.attr("y"),
                 dy = parseFloat(text.attr("dy")),
-                tspan = text.text(null).append("tspan").attr("x", -10).attr("y", y).attr("dy", dy + "em");
+                tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+
             while (word = words.pop()) {
                 line.push(word);
                 tspan.text(line.join(" "));
@@ -251,12 +261,33 @@
                     line.pop();
                     tspan.text(line.join(" "));
                     line = [word];
-                    tspan = text.append("tspan").attr("x", -10).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+                    tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
                 }
             }
         });
     }
-</script>
 
+    function showDynamicCursor(latlng, layer) {
+        // Aquí puedes agregar la lógica para calcular la distancia desde el inicio de la línea 
+        // y mostrar un cursor dinámico con la etiqueta.
+
+        // Puedes utilizar L.circleMarker para crear un cursor redondo
+        // y layer.getLatLngs() para obtener la distancia desde el punto inicial.
+
+        // Este es un ejemplo básico de cómo agregar un cursor dinámico.
+        if (!map._dynamicCursor) {
+            map._dynamicCursor = L.circleMarker(latlng, {
+                radius: 6,
+                color: 'yellow',
+                fillOpacity: 0.9
+            }).addTo(map);
+        } else {
+            map._dynamicCursor.setLatLng(latlng);
+        }
+
+        // Aquí puedes calcular la distancia desde el inicio de la línea y actualizar la etiqueta.
+    }
+
+</script>
 </body>
 </html>
