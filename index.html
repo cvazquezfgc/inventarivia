@@ -141,6 +141,7 @@
                 map.on('mousemove', function(e) {
                     var closestPoint = null;
                     var minDistance = Infinity;
+                    var closestFeature = null;
 
                     geojsonLayer.eachLayer(function (layer) {
                         var line = turf.lineString(layer.feature.geometry.coordinates);
@@ -151,6 +152,7 @@
                         if (snapped.properties.dist <= 0.01 && snapped.properties.dist < minDistance) {
                             closestPoint = snapped;
                             minDistance = snapped.properties.dist;
+                            closestFeature = layer;
                         }
                     });
 
@@ -167,10 +169,15 @@
                         } else {
                             cursorMarker.setLatLng(latlng);
                         }
+
+                        // Actualizar la tabla con la información del elemento sobre el que pasa el cursor
+                        if (!selectedFeature) {
+                            updateInfo(closestFeature.feature.properties);
+                        }
                     }
                 });
 
-                // Actualizar la tabla con la información de la línea seleccionada
+                // Actualizar la tabla con la información del elemento seleccionado
                 function updateInfo(properties) {
                     document.getElementById('info-linia').textContent = properties.LINIA || '';
                     document.getElementById('info-tram').textContent = properties.TRAM || '';
