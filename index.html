@@ -46,10 +46,11 @@
             top: 10px;
             right: 10px;
             background: white;
-            padding: 5px;
+            padding: 10px;
             border-radius: 5px;
             z-index: 1001;
             cursor: pointer;
+            color: #009245; /* Verde corporativo de FGC */
         }
         .leaflet-control {
             box-shadow: none;
@@ -61,7 +62,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             padding: 5px;
-            top: 40px;
+            top: 50px;
             right: 10px;
             z-index: 1001;
         }
@@ -86,19 +87,21 @@
     <div class="control-icon" id="layer-control" title="Capas Base">
         <i class="fas fa-map"></i>
     </div>
-    <div class="control-icon" id="filter-control" title="Filtro" style="right: 50px;">
+    <div class="control-icon" id="filter-control" title="Filtro" style="right: 60px;">
         <i class="fas fa-filter"></i>
     </div>
     <div class="panel" id="layer-panel">
         <strong>Capas Base</strong><br>
-        <input type="radio" name="base" onchange="changeBaseLayer('osm')"> OpenStreetMap<br>
-        <input type="radio" name="base" onchange="changeBaseLayer('google')"> Google Satellite<br>
-        <input type="radio" name="base" onchange="changeBaseLayer('pnoa')"> PNOA Ortofoto<br>
+        <input type="radio" name="base" onchange="changeBaseLayer('openStreetMapLayer')" checked> OpenStreetMap<br>
+        <input type="radio" name="base" onchange="changeBaseLayer('googleSatelliteLayer')"> Google Satellite<br>
+        <input type="radio" name="base" onchange="changeBaseLayer('pnoaLayer')"> PNOA Ortofoto<br>
+        <input type="radio" name="base" onchange="changeBaseLayer('cartoPositronLayer')"> Carto Positron<br>
+        <input type="radio" name="base" onchange="changeBaseLayer('ortoHibridaICGC')"> ICGC Orto<br>
+        <input type="radio" name="base" onchange="changeBaseLayer('topoGrisSimMonICGC')"> ICGC Topo Gris<br>
     </div>
     <div class="panel" id="filter-panel">
         <strong>Filtro de Capas</strong><br>
-        <input type="checkbox" checked> Barcelona-Valles<br>
-        <input type="checkbox"> Otra Línea<br>
+        <!-- Opciones de filtro se llenarán dinámicamente -->
     </div>
     <script>
         var map = L.map('map', {
@@ -121,6 +124,18 @@
             attribution: 'PNOA cedido por © Instituto Geográfico Nacional de España'
         });
 
+        var cartoPositronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>'
+        });
+
+        var ortoHibridaICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-orto-estandard/MON3857NW/{z}/{x}/{y}.png', {
+            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya'
+        });
+
+        var topoGrisSimMonICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-mapa-base-gris-simplificat/MON3857NW/{z}/{x}/{y}.png', {
+            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya'
+        });
+
         function togglePanel(panelId) {
             var panel = document.getElementById(panelId);
             panel.classList.toggle('open');
@@ -138,16 +153,28 @@
             map.removeLayer(openStreetMapLayer);
             map.removeLayer(googleSatelliteLayer);
             map.removeLayer(pnoaLayer);
+            map.removeLayer(cartoPositronLayer);
+            map.removeLayer(ortoHibridaICGC);
+            map.removeLayer(topoGrisSimMonICGC);
 
             switch (layer) {
-                case 'osm':
+                case 'openStreetMapLayer':
                     openStreetMapLayer.addTo(map);
                     break;
-                case 'google':
+                case 'googleSatelliteLayer':
                     googleSatelliteLayer.addTo(map);
                     break;
-                case 'pnoa':
+                case 'pnoaLayer':
                     pnoaLayer.addTo(map);
+                    break;
+                case 'cartoPositronLayer':
+                    cartoPositronLayer.addTo(map);
+                    break;
+                case 'ortoHibridaICGC':
+                    ortoHibridaICGC.addTo(map);
+                    break;
+                case 'topoGrisSimMonICGC':
+                    topoGrisSimMonICGC.addTo(map);
                     break;
             }
         }
@@ -159,6 +186,82 @@
                 });
             }
         });
+
+        // Load GeoJSON and add filtering logic
+        fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
+            .then(response => response.json())
+            .then(data => {
+                var geojsonLayer = L.geoJSON(data, {
+                    style: function (feature) {
+                        return {
+                            color: '#555555', // Gris oscuro para las líneas
+                            weight: 3
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.on('click', function (e) {
+                            if (selectedFeature) {
+                                selectedFeature.setStyle({ color: '#555555' });
+                            }
+                            selectedFeature = layer;
+                            layer.setStyle({ color: 'yellow' });
+                            updateInfo(feature.properties);
+                        });
+                    }
+                }).addTo(map);
+
+                // Fill filter options dynamically based on LINIA field
+                var linias = new Set(data.features.map(feature => feature.properties.LINIA));
+                var filterPanel = document.getElementById('filter-panel');
+                linias.forEach(linia => {
+                    var checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = true;
+                    checkbox.onchange = function () {
+                        filterGeoJsonLayer();
+                    };
+                    filterPanel.appendChild(checkbox);
+                    var label = document.createElement('span');
+                    label.textContent = linia;
+                    filterPanel.appendChild(label);
+                    filterPanel.appendChild(document.createElement('br'));
+                });
+
+                function filterGeoJsonLayer() {
+                    map.removeLayer(geojsonLayer);
+                    geojsonLayer = L.geoJSON(data, {
+                        style: function (feature) {
+                            return {
+                                color: '#555555',
+                                weight: 3
+                            };
+                        },
+                        onEachFeature: function (feature, layer) {
+                            layer.on('click', function (e) {
+                                if (selectedFeature) {
+                                    selectedFeature.setStyle({ color: '#555555' });
+                                }
+                                selectedFeature = layer;
+                                layer.setStyle({ color: 'yellow' });
+                                updateInfo(feature.properties);
+                            });
+                        },
+                        filter: function (feature) {
+                            return document.querySelectorAll('#filter-panel input[type="checkbox"]:checked').length === 0 || document.querySelectorAll('#filter-panel input[type="checkbox"]:checked').some(checkbox => feature.properties.LINIA === checkbox.nextSibling.textContent);
+                        }
+                    }).addTo(map);
+                }
+
+                function updateInfo(properties) {
+                    document.getElementById('info-linia').textContent = properties.LINIA || '';
+                    document.getElementById('info-tram').textContent = properties.TRAM || '';
+                    document.getElementById('info-via').textContent = properties.VIA || '';
+                    document.getElementById('info-gauge').textContent = properties.gauge || '';
+                    document.getElementById('info-maxspeed').textContent = properties.maxspeed || '';
+                    document.getElementById('info-voltage').textContent = properties.voltage || '';
+                }
+            })
+            .catch(error => console.log(error));
     </script>
 </body>
 </html>
