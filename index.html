@@ -67,9 +67,6 @@
         .panel.open {
             display: block;
         }
-        .leaflet-circle {
-            transition: transform 0.2s linear;
-        }
     </style>
 </head>
 <body>
@@ -88,7 +85,7 @@
     <div class="control-icon" id="layer-control" title="Capas Base">
         <i class="fas fa-map"></i>
     </div>
-    <div class="control-icon" id="filter-control" title="Filtro" style="right: 60px;">
+    <div class="control-icon" id="filter-control" title="Filtro de Líneas" style="right: 60px;">
         <i class="fas fa-filter"></i>
     </div>
     <div class="panel" id="layer-panel">
@@ -101,7 +98,7 @@
         <input type="radio" name="base" onchange="changeBaseLayer('topoGrisSimMonICGC')"> ICGC Topo Gris<br>
     </div>
     <div class="panel" id="filter-panel">
-        <strong>Filtro de Capas</strong><br>
+        <strong>Filtro de Líneas</strong><br>
         <!-- Opciones de filtro se llenarán dinámicamente -->
     </div>
     <script>
@@ -126,7 +123,7 @@
         });
 
         var cartoPositronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>'
+            attribution: '© Carto'
         });
 
         var ortoHibridaICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-orto-estandard/MON3857NW/{z}/{x}/{y}.png', {
@@ -137,7 +134,7 @@
             attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya'
         });
 
-        var geojsonLayer, cursorMarker;
+        var geojsonLayer, selectedFeature, cursorMarker, labelMarker;
 
         function togglePanel(panelId) {
             var panel = document.getElementById(panelId);
@@ -194,6 +191,7 @@
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
+                var linias = new Set();
                 geojsonLayer = L.geoJSON(data, {
                     style: function (feature) {
                         return {
@@ -202,15 +200,20 @@
                         };
                     },
                     onEachFeature: function (feature, layer) {
+                        linias.add(feature.properties.LINIA);
                         layer.on('mousemove', function (e) {
                             if (!cursorMarker) {
                                 cursorMarker = L.circleMarker(e.latlng, {
                                     radius: 6,
-                                    color: '#97d700', // Verde corporativo de FGC
+                                    color: '#97d700', // Verde FGC
                                     fillOpacity: 0.8,
                                     weight: 2
                                 }).addTo(map);
-                                var label = L.marker(e.latlng, {
+                            } else {
+                                cursorMarker.setLatLng(e.latlng);
+                            }
+                            if (!labelMarker) {
+                                labelMarker = L.marker(e.latlng, {
                                     icon: L.divIcon({
                                         className: 'label',
                                         html: '<div style="background:white; padding:2px; border-radius:3px;">' + feature.properties.full_id + '</div>',
@@ -218,8 +221,8 @@
                                     })
                                 }).addTo(map);
                             } else {
-                                cursorMarker.setLatLng(e.latlng);
-                                label.setLatLng(e.latlng);
+                                labelMarker.setLatLng(e.latlng);
+                                labelMarker._icon.innerHTML = '<div style="background:white; padding:2px; border-radius:3px;">' + feature.properties.full_id + '</div>';
                             }
                             updateInfo(feature.properties);
                         });
@@ -238,22 +241,93 @@
                         map.removeLayer(cursorMarker);
                         cursorMarker = null;
                     }
-                    if (label) {
-                        map.removeLayer(label);
-                        label = null;
+                    if (labelMarker) {
+                        map.removeLayer(labelMarker);
+                        labelMarker = null;
                     }
                 });
+
+                var filterPanel = document.getElementById('filter-panel');
+                linias.forEach(function(linia) {
+                    var checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = true;
+                    checkbox.id = linia;
+                    checkbox.onchange = function () {
+                        filterGeoJsonLayer();
+                    };
+                    var label = document.createElement('label');
+                    label.htmlFor = linia;
+                    label.textContent = linia;
+                    filterPanel.appendChild(checkbox);
+                    filterPanel.appendChild(label);
+                    filterPanel.appendChild(document.createElement('br'));
+                });
+
+                function filterGeoJsonLayer() {
+                    var checkedLinias = new Set();
+                    document.querySelectorAll('#filter-panel input[type="checkbox"]:checked').forEach(function (input) {
+                        checkedLinias.add(input.id);
+                    });
+                    geojsonLayer.clearLayers();
+                    L.geoJSON(data, {
+                        style: function (feature) {
+                            return {
+                                color: '#555555',
+                                weight: 3
+                            };
+                        },
+                        filter: function (feature) {
+                            return checkedLinias.has(feature.properties.LINIA);
+                        },
+                        onEachFeature: function (feature, layer) {
+                            layer.on('mousemove', function (e) {
+                                if (!cursorMarker) {
+                                    cursorMarker = L.circleMarker(e.latlng, {
+                                        radius: 6,
+                                        color: '#97d700', // Verde FGC
+                                        fillOpacity: 0.8,
+                                        weight: 2
+                                    }).addTo(map);
+                                } else {
+                                    cursorMarker.setLatLng(e.latlng);
+                                }
+                                if (!labelMarker) {
+                                    labelMarker = L.marker(e.latlng, {
+                                        icon: L.divIcon({
+                                            className: 'label',
+                                            html: '<div style="background:white; padding:2px; border-radius:3px;">' + feature.properties.full_id + '</div>',
+                                            iconAnchor: [0, 0]
+                                        })
+                                    }).addTo(map);
+                                } else {
+                                    labelMarker.setLatLng(e.latlng);
+                                    labelMarker._icon.innerHTML = '<div style="background:white; padding:2px; border-radius:3px;">' + feature.properties.full_id + '</div>';
+                                }
+                                updateInfo(feature.properties);
+                            });
+                            layer.on('click', function (e) {
+                                if (selectedFeature) {
+                                    selectedFeature.setStyle({ color: '#555555' });
+                                }
+                                selectedFeature = layer;
+                                layer.setStyle({ color: 'yellow' });
+                                updateInfo(feature.properties);
+                            });
+                        }
+                    }).addTo(geojsonLayer);
+                }
+
+                function updateInfo(properties) {
+                    document.getElementById('info-linia').textContent = 'LINIA: ' + (properties.LINIA || '');
+                    document.getElementById('info-tram').textContent = 'TRAM: ' + (properties.TRAM || '');
+                    document.getElementById('info-via').textContent = 'VIA: ' + (properties.VIA || '');
+                    document.getElementById('info-gauge').textContent = 'Gauge: ' + (properties.gauge || '');
+                    document.getElementById('info-maxspeed').textContent = 'Maxspeed: ' + (properties.maxspeed || '');
+                    document.getElementById('info-voltage').textContent = 'Voltage: ' + (properties.voltage || '');
+                }
             })
             .catch(error => console.log(error));
-
-        function updateInfo(properties) {
-            document.getElementById('info-linia').textContent = 'LINIA: ' + (properties.LINIA || '');
-            document.getElementById('info-tram').textContent = 'TRAM: ' + (properties.TRAM || '');
-            document.getElementById('info-via').textContent = 'VIA: ' + (properties.VIA || '');
-            document.getElementById('info-gauge').textContent = 'Gauge: ' + (properties.gauge || '');
-            document.getElementById('info-maxspeed').textContent = 'Maxspeed: ' + (properties.maxspeed || '');
-            document.getElementById('info-voltage').textContent = 'Voltage: ' + (properties.voltage || '');
-        }
     </script>
 </body>
 </html>
