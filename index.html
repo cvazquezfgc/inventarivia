@@ -73,7 +73,6 @@
     <div id="map"></div>
     <div id="info">
         <table>
-            <tr><th>Field</th><th>Value</th></tr>
             <tr><td>LINIA</td><td id="info-linia"></td></tr>
             <tr><td>TRAM</td><td id="info-tram"></td></tr>
             <tr><td>VIA</td><td id="info-via"></td></tr>
@@ -319,12 +318,12 @@
                 }
 
                 function updateInfo(properties) {
-                    document.getElementById('info-linia').textContent = 'LINIA: ' + (properties.LINIA || '');
-                    document.getElementById('info-tram').textContent = 'TRAM: ' + (properties.TRAM || '');
-                    document.getElementById('info-via').textContent = 'VIA: ' + (properties.VIA || '');
-                    document.getElementById('info-gauge').textContent = 'Gauge: ' + (properties.gauge || '');
-                    document.getElementById('info-maxspeed').textContent = 'Maxspeed: ' + (properties.maxspeed || '');
-                    document.getElementById('info-voltage').textContent = 'Voltage: ' + (properties.voltage || '');
+                    document.getElementById('info-linia').textContent = properties.LINIA || '';
+                    document.getElementById('info-tram').textContent = properties.TRAM || '';
+                    document.getElementById('info-via').textContent = properties.VIA || '';
+                    document.getElementById('info-gauge').textContent = properties.gauge || '';
+                    document.getElementById('info-maxspeed').textContent = properties.maxspeed || '';
+                    document.getElementById('info-voltage').textContent = properties.voltage || '';
                 }
             })
             .catch(error => console.log(error));
