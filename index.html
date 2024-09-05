@@ -44,8 +44,8 @@
             color: yellow;
         }
         .distance-label {
-            border: 1px solid black;
-            background-color: white;
+            color: yellow;
+            background-color: transparent;
             padding: 2px 4px;
             border-radius: 4px;
         }
@@ -153,6 +153,7 @@
                     var closestPoint = null;
                     var minDistance = Infinity;
                     var closestFeature = null;
+                    var totalDistance = 0;
 
                     geojsonLayer.eachLayer(function (layer) {
                         var line = turf.lineString(layer.feature.geometry.coordinates);
@@ -182,24 +183,40 @@
                             cursorMarker.setLatLng(latlng);
                         }
 
-                        // Actualizar la distancia desde el cursor hasta la Plaza de Cataluña
-                        var cursorLatLng = [e.latlng.lat, e.latlng.lng];
-                        var distanceToPlaza = turf.distance(turf.point(cursorLatLng), turf.point(plazaCatalunya), { units: 'kilometers' });
+                        // Actualizar la distancia a la Plaza de Cataluña para elementos con LINIA igual a Barcelona-Valles
+                        var distanceToPlaza = turf.distance(turf.point(latlng), turf.point(plazaCatalunya), { units: 'kilometers' });
+                        var distanceAlongLine = 0;
+
+                        if (closestFeature && closestFeature.feature.properties.LINIA === 'Barcelona-Valles') {
+                            var line = turf.lineString(closestFeature.feature.geometry.coordinates);
+                            var closestPointOnLine = turf.nearestPointOnLine(line, turf.point(plazaCatalunya));
+                            var index = line.geometry.coordinates.findIndex(coord => coord[0] === closestPointOnLine.geometry.coordinates[0] && coord[1] === closestPointOnLine.geometry.coordinates[1]);
+
+                            // Sumar la distancia de todos los segmentos de línea desde el cursor hasta el punto más cercano a Plaza Cataluña
+                            if (index > 0) {
+                                var segmentStart = turf.point(line.geometry.coordinates[0]);
+                                for (var i = 1; i <= index; i++) {
+                                    var segmentEnd = turf.point(line.geometry.coordinates[i]);
+                                    distanceAlongLine += turf.distance(segmentStart, segmentEnd, { units: 'kilometers' });
+                                    segmentStart = segmentEnd;
+                                }
+                            }
+                        }
 
                         if (!distanceMarker) {
                             distanceMarker = L.marker(latlng, {
                                 icon: L.divIcon({
                                     className: 'distance-label',
-                                    html: '<div>' + distanceToPlaza.toFixed(2) + ' km</div>',
+                                    html: '<div>' + distanceToPlaza.toFixed(2) + ' km<br>' + distanceAlongLine.toFixed(2) + ' km (a lo largo de la línea)</div>',
                                     iconAnchor: [-20, 15]
                                 })
                             }).addTo(map);
                         } else {
                             distanceMarker.setLatLng(latlng);
-                            distanceMarker._icon.innerHTML = '<div>' + distanceToPlaza.toFixed(2) + ' km</div>';
+                            distanceMarker._icon.innerHTML = '<div>' + distanceToPlaza.toFixed(2) + ' km<br>' + distanceAlongLine.toFixed(2) + ' km (a lo largo de la línea)</div>';
                         }
 
-                        // Actualizar la tabla de información con el elemento más cercano
+                        // Actualizar la tabla de información con la información del elemento más cercano
                         if (!selectedFeature) {
                             updateInfo(closestFeature.feature.properties);
                         }
