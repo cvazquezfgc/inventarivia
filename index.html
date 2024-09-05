@@ -34,12 +34,9 @@
             width: 100%;
             border-collapse: collapse;
         }
-        #info th, #info td {
+        #info td {
             padding: 4px;
             text-align: left;
-        }
-        #info th {
-            background-color: #f4f4f4;
         }
         .control-icon {
             position: absolute;
@@ -75,13 +72,12 @@
     <div id="map"></div>
     <div id="info">
         <table>
-            <tr><th>Campo</th><th>Valor</th></tr>
-            <tr><td>LINIA</td><td id="info-linia"></td></tr>
-            <tr><td>TRAM</td><td id="info-tram"></td></tr>
-            <tr><td>VIA</td><td id="info-via"></td></tr>
-            <tr><td>Gauge</td><td id="info-gauge"></td></tr>
-            <tr><td>Maxspeed</td><td id="info-maxspeed"></td></tr>
-            <tr><td>Voltage</td><td id="info-voltage"></td></tr>
+            <tr><td id="info-linia"></td></tr>
+            <tr><td id="info-tram"></td></tr>
+            <tr><td id="info-via"></td></tr>
+            <tr><td id="info-gauge"></td></tr>
+            <tr><td id="info-maxspeed"></td></tr>
+            <tr><td id="info-voltage"></td></tr>
         </table>
     </div>
     <div class="control-icon" id="layer-control" title="Capas Base">
@@ -135,6 +131,8 @@
         var topoGrisSimMonICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-mapa-base-gris-simplificat/MON3857NW/{z}/{x}/{y}.png', {
             attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya'
         });
+
+        var geojsonLayer;
 
         function togglePanel(panelId) {
             var panel = document.getElementById(panelId);
@@ -191,7 +189,7 @@
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
-                var geojsonLayer = L.geoJSON(data, {
+                geojsonLayer = L.geoJSON(data, {
                     style: function (feature) {
                         return {
                             color: '#555555', // Gris oscuro para las líneas
@@ -199,6 +197,10 @@
                         };
                     },
                     onEachFeature: function (feature, layer) {
+                        layer.on('mousemove', function (e) {
+                            updateCursorMarker(e.latlng);
+                            updateInfo(feature.properties);
+                        });
                         layer.on('click', function (e) {
                             if (selectedFeature) {
                                 selectedFeature.setStyle({ color: '#555555' });
@@ -210,47 +212,17 @@
                     }
                 }).addTo(map);
 
-                // Fill filter options dynamically based on LINIA field
-                var linias = new Set(data.features.map(feature => feature.properties.LINIA));
-                var filterPanel = document.getElementById('filter-panel');
-                linias.forEach(linia => {
-                    var checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.checked = true;
-                    checkbox.onchange = function () {
-                        filterGeoJsonLayer();
-                    };
-                    filterPanel.appendChild(checkbox);
-                    var label = document.createElement('span');
-                    label.textContent = linia;
-                    filterPanel.appendChild(label);
-                    filterPanel.appendChild(document.createElement('br'));
-                });
-
-                function filterGeoJsonLayer() {
-                    map.removeLayer(geojsonLayer);
-                    geojsonLayer = L.geoJSON(data, {
-                        style: function (feature) {
-                            return {
-                                color: '#555555',
-                                weight: 3
-                            };
-                        },
-                        onEachFeature: function (feature, layer) {
-                            layer.on('click', function (e) {
-                                if (selectedFeature) {
-                                    selectedFeature.setStyle({ color: '#555555' });
-                                }
-                                selectedFeature = layer;
-                                layer.setStyle({ color: 'yellow' });
-                                updateInfo(feature.properties);
-                            });
-                        },
-                        filter: function (feature) {
-                            var checkedLinias = Array.from(document.querySelectorAll('#filter-panel input[type="checkbox"]:checked')).map(input => input.nextSibling.textContent);
-                            return checkedLinias.length === 0 || checkedLinias.includes(feature.properties.LINIA);
-                        }
-                    }).addTo(map);
+                function updateCursorMarker(latlng) {
+                    if (!cursorMarker) {
+                        cursorMarker = L.circleMarker(latlng, {
+                            radius: 6,
+                            color: 'green',
+                            weight: 2,
+                            fillOpacity: 1
+                        }).addTo(map);
+                    } else {
+                        cursorMarker.setLatLng(latlng);
+                    }
                 }
 
                 function updateInfo(properties) {
