@@ -43,6 +43,12 @@
         .highlighted {
             color: yellow;
         }
+        .distance-label {
+            border: 1px solid black;
+            background-color: white;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -154,7 +160,8 @@
                         var snapped = turf.nearestPointOnLine(line, point);
                         var distance = turf.distance(turf.point(line.geometry.coordinates[0]), snapped, { units: 'kilometers' });
 
-                        if (snapped.properties.dist <= 0.01 && snapped.properties.dist < minDistance) {
+                        // Modificar la distancia para que aparezca cuando esté cerca de la línea
+                        if (snapped.properties.dist <= 0.05 && snapped.properties.dist < minDistance) { // 0.05 approx 5 km radio
                             closestPoint = snapped;
                             minDistance = snapped.properties.dist;
                             closestFeature = layer;
@@ -182,7 +189,7 @@
                         if (!distanceMarker) {
                             distanceMarker = L.marker(latlng, {
                                 icon: L.divIcon({
-                                    className: 'highlighted',
+                                    className: 'distance-label',
                                     html: '<div>' + distanceToPlaza.toFixed(2) + ' km</div>',
                                     iconAnchor: [-20, 15]
                                 })
