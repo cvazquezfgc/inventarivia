@@ -30,10 +30,6 @@
             font-size: 14px;
             z-index: 1000;
         }
-        #info table {
-            width: 100%;
-            border-collapse: collapse;
-        }
         #info td {
             padding: 4px;
             text-align: left;
@@ -132,7 +128,7 @@
             attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya'
         });
 
-        var geojsonLayer;
+        var geojsonLayer, cursorMarker;
 
         function togglePanel(panelId) {
             var panel = document.getElementById(panelId);
@@ -198,7 +194,16 @@
                     },
                     onEachFeature: function (feature, layer) {
                         layer.on('mousemove', function (e) {
-                            updateCursorMarker(e.latlng);
+                            if (!cursorMarker) {
+                                cursorMarker = L.circleMarker(e.latlng, {
+                                    radius: 6,
+                                    color: 'green',
+                                    fillOpacity: 0.8,
+                                    weight: 2
+                                }).addTo(map);
+                            } else {
+                                cursorMarker.setLatLng(e.latlng);
+                            }
                             updateInfo(feature.properties);
                         });
                         layer.on('click', function (e) {
@@ -211,30 +216,23 @@
                         });
                     }
                 }).addTo(map);
-
-                function updateCursorMarker(latlng) {
-                    if (!cursorMarker) {
-                        cursorMarker = L.circleMarker(latlng, {
-                            radius: 6,
-                            color: 'green',
-                            weight: 2,
-                            fillOpacity: 1
-                        }).addTo(map);
-                    } else {
-                        cursorMarker.setLatLng(latlng);
+                map.on('mouseout', function () {
+                    if (cursorMarker) {
+                        map.removeLayer(cursorMarker);
+                        cursorMarker = null;
                     }
-                }
-
-                function updateInfo(properties) {
-                    document.getElementById('info-linia').textContent = properties.LINIA || '';
-                    document.getElementById('info-tram').textContent = properties.TRAM || '';
-                    document.getElementById('info-via').textContent = properties.VIA || '';
-                    document.getElementById('info-gauge').textContent = properties.gauge || '';
-                    document.getElementById('info-maxspeed').textContent = properties.maxspeed || '';
-                    document.getElementById('info-voltage').textContent = properties.voltage || '';
-                }
+                });
             })
             .catch(error => console.log(error));
+
+        function updateInfo(properties) {
+            document.getElementById('info-linia').textContent = properties.LINIA || '';
+            document.getElementById('info-tram').textContent = properties.TRAM || '';
+            document.getElementById('info-via').textContent = properties.VIA || '';
+            document.getElementById('info-gauge').textContent = properties.gauge || '';
+            document.getElementById('info-maxspeed').textContent = properties.maxspeed || '';
+            document.getElementById('info-voltage').textContent = properties.voltage || '';
+        }
     </script>
 </body>
 </html>
