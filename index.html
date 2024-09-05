@@ -70,7 +70,7 @@
         var openStreetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19
-        }).addTo(map); // Establecer OpenStreetMap como la capa por defecto
+        }).addTo(map);
 
         var googleSatelliteLayer = L.tileLayer('http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
             attribution: 'Map data © Google',
@@ -115,7 +115,6 @@
 
         var selectedFeature = null;
         var cursorMarker = null;
-        var distanceMarker = null;
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
@@ -129,12 +128,26 @@
                         };
                     },
                     onEachFeature: function (feature, layer) {
+                        // Añadir evento mouseover para cambiar la información dinámicamente
+                        layer.on('mouseover', function (e) {
+                            updateInfo(feature.properties); // Actualizar la tabla de información
+                            layer.setStyle({ color: 'yellow' }); // Resaltar en amarillo
+                        });
+
+                        // Añadir evento mouseout para volver a la configuración original
+                        layer.on('mouseout', function (e) {
+                            if (!selectedFeature || selectedFeature !== layer) {
+                                layer.setStyle({ color: '#555555' }); // Volver al color original
+                            }
+                        });
+
+                        // Evento click para seleccionar una característica y detener la actualización dinámica
                         layer.on('click', function (e) {
                             if (selectedFeature) {
                                 selectedFeature.setStyle({ color: '#555555' }); // Cambiar a gris oscuro
                             }
                             selectedFeature = layer;
-                            layer.setStyle({ color: 'yellow' }); // Resaltar en amarillo
+                            layer.setStyle({ color: 'red' }); // Resaltar en rojo
 
                             updateInfo(feature.properties); // Actualizar la tabla de información
 
@@ -185,20 +198,6 @@
                             cursorMarker.setLatLng(latlng);
                         }
 
-                        if (!distanceMarker) {
-                            distanceMarker = L.marker(latlng, {
-                                icon: L.divIcon({
-                                    className: 'highlighted',
-                                    html: '<div>' + minDistance.toFixed(2) + ' km</div>',
-                                    iconAnchor: [-20, 15]
-                                })
-                            }).addTo(map);
-                        } else {
-                            distanceMarker.setLatLng(latlng);
-                            distanceMarker._icon.innerHTML = '<div>' + minDistance.toFixed(2) + ' km</div>';
-                        }
-
-                        // Actualizar la tabla de información con la distancia
                         updateDynamicDistance(minDistance);
                     }
                 }
