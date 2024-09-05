@@ -40,9 +40,6 @@
         #info th {
             background-color: #f4f4f4;
         }
-        .highlighted {
-            color: yellow;
-        }
     </style>
 </head>
 <body>
@@ -150,25 +147,11 @@
                             layer.setStyle({ color: 'red' }); // Resaltar en rojo
 
                             updateInfo(feature.properties); // Actualizar la tabla de información
-
-                            // Detener la actualización dinámica mientras está seleccionado
-                            map.off('mousemove', onMapMouseMove);
                         });
                     }
                 }).addTo(map);
 
-                // Deseleccionar elemento al hacer clic fuera
-                map.on('click', function (e) {
-                    if (selectedFeature) {
-                        selectedFeature.setStyle({ color: '#555555' });
-                        selectedFeature = null;
-
-                        // Reanudar la actualización dinámica
-                        map.on('mousemove', onMapMouseMove);
-                    }
-                });
-
-                function onMapMouseMove(e) {
+                map.on('mousemove', function(e) {
                     var closestPoint = null;
                     var minDistance = Infinity;
 
@@ -178,7 +161,7 @@
                         var snapped = turf.nearestPointOnLine(line, point);
                         var distance = turf.distance(turf.point(line.geometry.coordinates[0]), snapped, { units: 'kilometers' });
 
-                        if (snapped.properties.dist <= 0.01 && snapped.properties.dist < minDistance) { // 0.01 approx 1 km radius
+                        if (snapped.properties.dist <= 0.01 && snapped.properties.dist < minDistance) {
                             closestPoint = snapped;
                             minDistance = snapped.properties.dist;
                         }
@@ -197,12 +180,8 @@
                         } else {
                             cursorMarker.setLatLng(latlng);
                         }
-
-                        updateDynamicDistance(minDistance);
                     }
-                }
-
-                map.on('mousemove', onMapMouseMove);
+                });
 
                 function updateInfo(properties) {
                     document.getElementById('info-linia').textContent = properties.LINIA || '';
@@ -211,17 +190,6 @@
                     document.getElementById('info-gauge').textContent = properties.gauge || '';
                     document.getElementById('info-maxspeed').textContent = properties.maxspeed || '';
                     document.getElementById('info-voltage').textContent = properties.voltage || '';
-                }
-
-                function updateDynamicDistance(distance) {
-                    if (!selectedFeature) {
-                        document.getElementById('info-linia').textContent = 'Distancia';
-                        document.getElementById('info-tram').textContent = distance.toFixed(2) + ' km';
-                        document.getElementById('info-via').textContent = '';
-                        document.getElementById('info-gauge').textContent = '';
-                        document.getElementById('info-maxspeed').textContent = '';
-                        document.getElementById('info-voltage').textContent = '';
-                    }
                 }
             })
             .catch(error => console.log(error));
