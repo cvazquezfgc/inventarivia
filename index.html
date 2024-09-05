@@ -40,6 +40,9 @@
         #info th {
             background-color: #f4f4f4;
         }
+        .highlighted {
+            color: yellow;
+        }
     </style>
 </head>
 <body>
@@ -112,6 +115,10 @@
 
         var selectedFeature = null;
         var cursorMarker = null;
+        var distanceMarker = null;
+
+        // Coordenadas de la Plaza de Cataluña
+        var plazaCatalunya = [41.3870, 2.1700];
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
@@ -125,7 +132,6 @@
                         };
                     },
                     onEachFeature: function (feature, layer) {
-                        // Click para resaltar en amarillo y actualizar la información
                         layer.on('click', function (e) {
                             if (selectedFeature) {
                                 selectedFeature.setStyle({ color: '#555555' }); // Cambiar la línea anterior a gris oscuro
@@ -137,7 +143,6 @@
                     }
                 }).addTo(map);
 
-                // Mantener el marcador que sigue al cursor
                 map.on('mousemove', function(e) {
                     var closestPoint = null;
                     var minDistance = Infinity;
@@ -170,14 +175,39 @@
                             cursorMarker.setLatLng(latlng);
                         }
 
-                        // Actualizar la tabla con la información del elemento sobre el que pasa el cursor
+                        // Actualizar la distancia desde el cursor hasta la Plaza de Cataluña
+                        var cursorLatLng = [e.latlng.lat, e.latlng.lng];
+                        var distanceToPlaza = turf.distance(turf.point(cursorLatLng), turf.point(plazaCatalunya), { units: 'kilometers' });
+
+                        if (!distanceMarker) {
+                            distanceMarker = L.marker(latlng, {
+                                icon: L.divIcon({
+                                    className: 'highlighted',
+                                    html: '<div>' + distanceToPlaza.toFixed(2) + ' km</div>',
+                                    iconAnchor: [-20, 15]
+                                })
+                            }).addTo(map);
+                        } else {
+                            distanceMarker.setLatLng(latlng);
+                            distanceMarker._icon.innerHTML = '<div>' + distanceToPlaza.toFixed(2) + ' km</div>';
+                        }
+
+                        // Actualizar la tabla de información con el elemento más cercano
                         if (!selectedFeature) {
                             updateInfo(closestFeature.feature.properties);
+                        }
+                    } else {
+                        if (cursorMarker) {
+                            map.removeLayer(cursorMarker);
+                            cursorMarker = null;
+                        }
+                        if (distanceMarker) {
+                            map.removeLayer(distanceMarker);
+                            distanceMarker = null;
                         }
                     }
                 });
 
-                // Actualizar la tabla con la información del elemento seleccionado
                 function updateInfo(properties) {
                     document.getElementById('info-linia').textContent = properties.LINIA || '';
                     document.getElementById('info-tram').textContent = properties.TRAM || '';
