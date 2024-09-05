@@ -125,15 +125,13 @@
                         };
                     },
                     onEachFeature: function (feature, layer) {
-                        // No cambiar color al pasar el mouse (mouseover)
-                        // Solo al hacer clic para seleccionar
+                        // Click para resaltar en amarillo y actualizar la información
                         layer.on('click', function (e) {
                             if (selectedFeature) {
-                                selectedFeature.setStyle({ color: '#555555' }); // Cambiar a gris oscuro
+                                selectedFeature.setStyle({ color: '#555555' }); // Cambiar la línea anterior a gris oscuro
                             }
                             selectedFeature = layer;
-                            layer.setStyle({ color: 'yellow' }); // Resaltar en amarillo
-
+                            layer.setStyle({ color: 'yellow' }); // Resaltar la línea seleccionada en amarillo
                             updateInfo(feature.properties); // Actualizar la tabla de información
                         });
                     }
