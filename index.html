@@ -40,14 +40,17 @@
         #info th {
             background-color: #f4f4f4;
         }
-        .highlighted {
-            color: yellow;
+        .leaflet-control-layers {
+            padding-bottom: 30px;
         }
-        .distance-label {
-            color: yellow;
-            background-color: transparent;
-            padding: 2px 4px;
-            border-radius: 4px;
+        #linia-filter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 5px;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -63,6 +66,12 @@
             <tr><td>Maxspeed</td><td id="info-maxspeed"></td></tr>
             <tr><td>Voltage</td><td id="info-voltage"></td></tr>
         </table>
+    </div>
+    <div id="linia-filter">
+        <select id="linia-selector">
+            <option value="all">Mostrar Todo</option>
+            <!-- Opciones se llenarán dinámicamente -->
+        </select>
     </div>
     <script>
         // Inicializar el mapa
@@ -121,15 +130,12 @@
 
         var selectedFeature = null;
         var cursorMarker = null;
-        var distanceMarker = null;
-
-        // Coordenadas de la Plaza de Cataluña
-        var plazaCatalunya = [41.3870, 2.1700];
 
         // Cargar el archivo GeoJSON desde GitHub
         fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
             .then(response => response.json())
             .then(data => {
+                var uniqueLines = new Set();
                 var geojsonLayer = L.geoJSON(data, {
                     style: function (feature) {
                         return {
@@ -138,22 +144,61 @@
                         };
                     },
                     onEachFeature: function (feature, layer) {
+                        uniqueLines.add(feature.properties.LINIA);
+                        // No cambiar color al pasar el mouse (mouseover)
+                        // Solo al hacer clic para seleccionar
                         layer.on('click', function (e) {
                             if (selectedFeature) {
-                                selectedFeature.setStyle({ color: '#555555' }); // Cambiar la línea anterior a gris oscuro
+                                selectedFeature.setStyle({ color: '#555555' }); // Cambiar a gris oscuro
                             }
                             selectedFeature = layer;
-                            layer.setStyle({ color: 'yellow' }); // Resaltar la línea seleccionada en amarillo
+                            layer.setStyle({ color: 'yellow' }); // Resaltar en amarillo
+
                             updateInfo(feature.properties); // Actualizar la tabla de información
                         });
+                    },
+                    filter: function (feature, layer) {
+                        return feature.properties.LINIA === document.getElementById('linia-selector').value || document.getElementById('linia-selector').value === 'all';
                     }
                 }).addTo(map);
 
+                // Fill the LINIA filter selector
+                uniqueLines.forEach(linia => {
+                    var option = document.createElement('option');
+                    option.value = linia;
+                    option.text = linia;
+                    document.getElementById('linia-selector').appendChild(option);
+                });
+
+                document.getElementById('linia-selector').addEventListener('change', function () {
+                    map.removeLayer(geojsonLayer);
+                    geojsonLayer = L.geoJSON(data, {
+                        style: function (feature) {
+                            return {
+                                color: '#555555',
+                                weight: 3
+                            };
+                        },
+                        onEachFeature: function (feature, layer) {
+                            layer.on('click', function (e) {
+                                if (selectedFeature) {
+                                    selectedFeature.setStyle({ color: '#555555' });
+                                }
+                                selectedFeature = layer;
+                                layer.setStyle({ color: 'yellow' });
+                                updateInfo(feature.properties);
+                            });
+                        },
+                        filter: function (feature, layer) {
+                            return feature.properties.LINIA === document.getElementById('linia-selector').value || document.getElementById('linia-selector').value === 'all';
+                        }
+                    }).addTo(map);
+                });
+
+                // Mantener el marcador que sigue al cursor
                 map.on('mousemove', function(e) {
                     var closestPoint = null;
                     var minDistance = Infinity;
-                    var closestFeature = null;
-                    var totalDistance = 0;
 
                     geojsonLayer.eachLayer(function (layer) {
                         var line = turf.lineString(layer.feature.geometry.coordinates);
@@ -161,11 +206,9 @@
                         var snapped = turf.nearestPointOnLine(line, point);
                         var distance = turf.distance(turf.point(line.geometry.coordinates[0]), snapped, { units: 'kilometers' });
 
-                        // Modificar la distancia para que aparezca cuando esté cerca de la línea
-                        if (snapped.properties.dist <= 0.05 && snapped.properties.dist < minDistance) { // 0.05 approx 5 km radio
+                        if (snapped.properties.dist <= 0.01 && snapped.properties.dist < minDistance) {
                             closestPoint = snapped;
                             minDistance = snapped.properties.dist;
-                            closestFeature = layer;
                         }
                     });
 
@@ -182,56 +225,10 @@
                         } else {
                             cursorMarker.setLatLng(latlng);
                         }
-
-                        // Actualizar la distancia a la Plaza de Cataluña para elementos con LINIA igual a Barcelona-Valles
-                        var distanceToPlaza = turf.distance(turf.point(latlng), turf.point(plazaCatalunya), { units: 'kilometers' });
-                        var distanceAlongLine = 0;
-
-                        if (closestFeature && closestFeature.feature.properties.LINIA === 'Barcelona-Valles') {
-                            var line = turf.lineString(closestFeature.feature.geometry.coordinates);
-                            var closestPointOnLine = turf.nearestPointOnLine(line, turf.point(plazaCatalunya));
-                            var index = line.geometry.coordinates.findIndex(coord => coord[0] === closestPointOnLine.geometry.coordinates[0] && coord[1] === closestPointOnLine.geometry.coordinates[1]);
-
-                            // Sumar la distancia de todos los segmentos de línea desde el cursor hasta el punto más cercano a Plaza Cataluña
-                            if (index > 0) {
-                                var segmentStart = turf.point(line.geometry.coordinates[0]);
-                                for (var i = 1; i <= index; i++) {
-                                    var segmentEnd = turf.point(line.geometry.coordinates[i]);
-                                    distanceAlongLine += turf.distance(segmentStart, segmentEnd, { units: 'kilometers' });
-                                    segmentStart = segmentEnd;
-                                }
-                            }
-                        }
-
-                        if (!distanceMarker) {
-                            distanceMarker = L.marker(latlng, {
-                                icon: L.divIcon({
-                                    className: 'distance-label',
-                                    html: '<div>' + distanceToPlaza.toFixed(2) + ' km<br>' + distanceAlongLine.toFixed(2) + ' km (a lo largo de la línea)</div>',
-                                    iconAnchor: [-20, 15]
-                                })
-                            }).addTo(map);
-                        } else {
-                            distanceMarker.setLatLng(latlng);
-                            distanceMarker._icon.innerHTML = '<div>' + distanceToPlaza.toFixed(2) + ' km<br>' + distanceAlongLine.toFixed(2) + ' km (a lo largo de la línea)</div>';
-                        }
-
-                        // Actualizar la tabla de información con la información del elemento más cercano
-                        if (!selectedFeature) {
-                            updateInfo(closestFeature.feature.properties);
-                        }
-                    } else {
-                        if (cursorMarker) {
-                            map.removeLayer(cursorMarker);
-                            cursorMarker = null;
-                        }
-                        if (distanceMarker) {
-                            map.removeLayer(distanceMarker);
-                            distanceMarker = null;
-                        }
                     }
                 });
 
+                // Actualizar la tabla con la información de la línea seleccionada
                 function updateInfo(properties) {
                     document.getElementById('info-linia').textContent = properties.LINIA || '';
                     document.getElementById('info-tram').textContent = properties.TRAM || '';
