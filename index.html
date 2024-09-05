@@ -247,7 +247,8 @@
                             });
                         },
                         filter: function (feature) {
-                            return document.querySelectorAll('#filter-panel input[type="checkbox"]:checked').length === 0 || document.querySelectorAll('#filter-panel input[type="checkbox"]:checked').some(checkbox => feature.properties.LINIA === checkbox.nextSibling.textContent);
+                            var checkedLinias = Array.from(document.querySelectorAll('#filter-panel input[type="checkbox"]:checked')).map(input => input.nextSibling.textContent);
+                            return checkedLinias.length === 0 || checkedLinias.includes(feature.properties.LINIA);
                         }
                     }).addTo(map);
                 }
