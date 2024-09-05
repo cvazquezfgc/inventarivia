@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
     <style>
         body, html {
             margin: 0;
@@ -23,7 +24,7 @@
             bottom: 0;
             left: 0;
             width: 300px;
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.8);
             border-radius: 8px;
             padding: 10px;
             font-size: 14px;
@@ -40,17 +41,32 @@
         #info th {
             background-color: #f4f4f4;
         }
-        .leaflet-control-layers {
-            padding-bottom: 30px;
-        }
-        #linia-filter {
+        .control-icon {
             position: absolute;
             top: 10px;
             right: 10px;
-            z-index: 1000;
             background: white;
             padding: 5px;
             border-radius: 5px;
+            z-index: 1001;
+            cursor: pointer;
+        }
+        .leaflet-control {
+            box-shadow: none;
+        }
+        .panel {
+            display: none;
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+            top: 40px;
+            right: 10px;
+            z-index: 1001;
+        }
+        .panel.open {
+            display: block;
         }
     </style>
 </head>
@@ -67,178 +83,82 @@
             <tr><td>Voltage</td><td id="info-voltage"></td></tr>
         </table>
     </div>
-    <div id="linia-filter">
-        <select id="linia-selector">
-            <option value="all">Mostrar Todo</option>
-            <!-- Opciones se llenarán dinámicamente -->
-        </select>
+    <div class="control-icon" id="layer-control" title="Capas Base">
+        <i class="fas fa-map"></i>
+    </div>
+    <div class="control-icon" id="filter-control" title="Filtro" style="right: 50px;">
+        <i class="fas fa-filter"></i>
+    </div>
+    <div class="panel" id="layer-panel">
+        <strong>Capas Base</strong><br>
+        <input type="radio" name="base" onchange="changeBaseLayer('osm')"> OpenStreetMap<br>
+        <input type="radio" name="base" onchange="changeBaseLayer('google')"> Google Satellite<br>
+        <input type="radio" name="base" onchange="changeBaseLayer('pnoa')"> PNOA Ortofoto<br>
+    </div>
+    <div class="panel" id="filter-panel">
+        <strong>Filtro de Capas</strong><br>
+        <input type="checkbox" checked> Barcelona-Valles<br>
+        <input type="checkbox"> Otra Línea<br>
     </div>
     <script>
-        // Inicializar el mapa
         var map = L.map('map', {
             center: [41.3879, 2.16992],
             zoom: 10,
             maxZoom: 20
         });
 
-        // Definir las capas base
         var openStreetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
         var googleSatelliteLayer = L.tileLayer('http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
-            attribution: 'Map data © Google',
-            maxZoom: 20
+            attribution: 'Map data © Google'
         });
 
         var pnoaLayer = L.tileLayer.wms('http://www.ign.es/wms-inspire/pnoa-ma', {
             layers: 'OI.OrthoimageCoverage',
             format: 'image/png',
-            transparent: false,
-            continuousWorld: true,
-            attribution: 'PNOA cedido por © <a href="http://www.ign.es/ign/main/index.do" target="_blank">Instituto Geográfico Nacional de España</a>'
+            attribution: 'PNOA cedido por © Instituto Geográfico Nacional de España'
         });
 
-        var cartoPositronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>',
-            maxZoom: 20
+        function togglePanel(panelId) {
+            var panel = document.getElementById(panelId);
+            panel.classList.toggle('open');
+        }
+
+        document.getElementById('layer-control').addEventListener('click', function() {
+            togglePanel('layer-panel');
         });
 
-        var ortoHibridaICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-orto-estandard/MON3857NW/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © OpenStreetMap contributors; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
+        document.getElementById('filter-control').addEventListener('click', function() {
+            togglePanel('filter-panel');
         });
 
-        var topoGrisSimMonICGC = L.tileLayer('https://geoserveis.icgc.cat/servei/catalunya/contextmaps/wmts/contextmaps-mapa-base-gris-simplificat/MON3857NW/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: 'Catalunya: Institut Cartogràfic i Geològic de Catalunya CC-BY-SA-3, Gencat i altres.<br> Resta del món: <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a>; © Mapzen, OpenStreetMap, and others; World Imagery ©ESRI.<a href="https://www.icgc.cat/Aplicacions/Visors/ContextMaps#credits" target="_blank">...Més detall</a>'
-        });
+        function changeBaseLayer(layer) {
+            map.removeLayer(openStreetMapLayer);
+            map.removeLayer(googleSatelliteLayer);
+            map.removeLayer(pnoaLayer);
 
-        // Definir los controles de capas base
-        var baseMaps = {
-            "OpenStreetMap": openStreetMapLayer,
-            "Google Satellite": googleSatelliteLayer,
-            "PNOA Ortofoto": pnoaLayer,
-            "Carto Positron": cartoPositronLayer,
-            "ICGC Orto": ortoHibridaICGC,
-            "ICGC Topo": topoGrisSimMonICGC
-        };
+            switch (layer) {
+                case 'osm':
+                    openStreetMapLayer.addTo(map);
+                    break;
+                case 'google':
+                    googleSatelliteLayer.addTo(map);
+                    break;
+                case 'pnoa':
+                    pnoaLayer.addTo(map);
+                    break;
+            }
+        }
 
-        // Añadir el control de capas base
-        L.control.layers(baseMaps, null, { position: 'topright', collapsed: false }).addTo(map);
-
-        var selectedFeature = null;
-        var cursorMarker = null;
-
-        // Cargar el archivo GeoJSON desde GitHub
-        fetch('https://raw.githubusercontent.com/cvazquezfgc/inventarivia/main/linies.geojson')
-            .then(response => response.json())
-            .then(data => {
-                var uniqueLines = new Set();
-                var geojsonLayer = L.geoJSON(data, {
-                    style: function (feature) {
-                        return {
-                            color: '#555555', // Gris oscuro para las líneas
-                            weight: 3
-                        };
-                    },
-                    onEachFeature: function (feature, layer) {
-                        uniqueLines.add(feature.properties.LINIA);
-                        // No cambiar color al pasar el mouse (mouseover)
-                        // Solo al hacer clic para seleccionar
-                        layer.on('click', function (e) {
-                            if (selectedFeature) {
-                                selectedFeature.setStyle({ color: '#555555' }); // Cambiar a gris oscuro
-                            }
-                            selectedFeature = layer;
-                            layer.setStyle({ color: 'yellow' }); // Resaltar en amarillo
-
-                            updateInfo(feature.properties); // Actualizar la tabla de información
-                        });
-                    },
-                    filter: function (feature, layer) {
-                        return feature.properties.LINIA === document.getElementById('linia-selector').value || document.getElementById('linia-selector').value === 'all';
-                    }
-                }).addTo(map);
-
-                // Fill the LINIA filter selector
-                uniqueLines.forEach(linia => {
-                    var option = document.createElement('option');
-                    option.value = linia;
-                    option.text = linia;
-                    document.getElementById('linia-selector').appendChild(option);
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.control-icon, .panel')) {
+                document.querySelectorAll('.panel').forEach(function(panel) {
+                    panel.classList.remove('open');
                 });
-
-                document.getElementById('linia-selector').addEventListener('change', function () {
-                    map.removeLayer(geojsonLayer);
-                    geojsonLayer = L.geoJSON(data, {
-                        style: function (feature) {
-                            return {
-                                color: '#555555',
-                                weight: 3
-                            };
-                        },
-                        onEachFeature: function (feature, layer) {
-                            layer.on('click', function (e) {
-                                if (selectedFeature) {
-                                    selectedFeature.setStyle({ color: '#555555' });
-                                }
-                                selectedFeature = layer;
-                                layer.setStyle({ color: 'yellow' });
-                                updateInfo(feature.properties);
-                            });
-                        },
-                        filter: function (feature, layer) {
-                            return feature.properties.LINIA === document.getElementById('linia-selector').value || document.getElementById('linia-selector').value === 'all';
-                        }
-                    }).addTo(map);
-                });
-
-                // Mantener el marcador que sigue al cursor
-                map.on('mousemove', function(e) {
-                    var closestPoint = null;
-                    var minDistance = Infinity;
-
-                    geojsonLayer.eachLayer(function (layer) {
-                        var line = turf.lineString(layer.feature.geometry.coordinates);
-                        var point = turf.point([e.latlng.lng, e.latlng.lat]);
-                        var snapped = turf.nearestPointOnLine(line, point);
-                        var distance = turf.distance(turf.point(line.geometry.coordinates[0]), snapped, { units: 'kilometers' });
-
-                        if (snapped.properties.dist <= 0.01 && snapped.properties.dist < minDistance) {
-                            closestPoint = snapped;
-                            minDistance = snapped.properties.dist;
-                        }
-                    });
-
-                    if (closestPoint) {
-                        var latlng = L.latLng(closestPoint.geometry.coordinates[1], closestPoint.geometry.coordinates[0]);
-
-                        if (!cursorMarker) {
-                            cursorMarker = L.circleMarker(latlng, {
-                                radius: 6,
-                                color: 'green',
-                                weight: 2,
-                                fillOpacity: 1
-                            }).addTo(map);
-                        } else {
-                            cursorMarker.setLatLng(latlng);
-                        }
-                    }
-                });
-
-                // Actualizar la tabla con la información de la línea seleccionada
-                function updateInfo(properties) {
-                    document.getElementById('info-linia').textContent = properties.LINIA || '';
-                    document.getElementById('info-tram').textContent = properties.TRAM || '';
-                    document.getElementById('info-via').textContent = properties.VIA || '';
-                    document.getElementById('info-gauge').textContent = properties.gauge || '';
-                    document.getElementById('info-maxspeed').textContent = properties.maxspeed || '';
-                    document.getElementById('info-voltage').textContent = properties.voltage || '';
-                }
-            })
-            .catch(error => console.log(error));
+            }
+        });
     </script>
 </body>
 </html>
