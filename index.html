@@ -21,16 +21,21 @@
         }
         #info {
             position: absolute;
-            bottom: 0;
-            left: 0;
+            bottom: 10px;
+            left: 10px;
             width: 300px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
             padding: 10px;
             font-size: 14px;
             z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        #info td {
+        #info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #info th, #info td {
             padding: 4px;
             text-align: left;
         }
@@ -43,7 +48,7 @@
             border-radius: 5px;
             z-index: 1001;
             cursor: pointer;
-            color: #009245; /* Verde corporativo de FGC */
+            color: #97d700; /* Verde corporativo de FGC */
         }
         .leaflet-control {
             box-shadow: none;
@@ -62,18 +67,22 @@
         .panel.open {
             display: block;
         }
+        .leaflet-circle {
+            transition: transform 0.2s linear;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="info">
         <table>
-            <tr><td id="info-linia"></td></tr>
-            <tr><td id="info-tram"></td></tr>
-            <tr><td id="info-via"></td></tr>
-            <tr><td id="info-gauge"></td></tr>
-            <tr><td id="info-maxspeed"></td></tr>
-            <tr><td id="info-voltage"></td></tr>
+            <tr><th>Field</th><th>Value</th></tr>
+            <tr><td>LINIA</td><td id="info-linia"></td></tr>
+            <tr><td>TRAM</td><td id="info-tram"></td></tr>
+            <tr><td>VIA</td><td id="info-via"></td></tr>
+            <tr><td>Gauge</td><td id="info-gauge"></td></tr>
+            <tr><td>Maxspeed</td><td id="info-maxspeed"></td></tr>
+            <tr><td>Voltage</td><td id="info-voltage"></td></tr>
         </table>
     </div>
     <div class="control-icon" id="layer-control" title="Capas Base">
@@ -197,12 +206,20 @@
                             if (!cursorMarker) {
                                 cursorMarker = L.circleMarker(e.latlng, {
                                     radius: 6,
-                                    color: 'green',
+                                    color: '#97d700', // Verde corporativo de FGC
                                     fillOpacity: 0.8,
                                     weight: 2
                                 }).addTo(map);
+                                var label = L.marker(e.latlng, {
+                                    icon: L.divIcon({
+                                        className: 'label',
+                                        html: '<div style="background:white; padding:2px; border-radius:3px;">' + feature.properties.full_id + '</div>',
+                                        iconAnchor: [0, 0]
+                                    })
+                                }).addTo(map);
                             } else {
                                 cursorMarker.setLatLng(e.latlng);
+                                label.setLatLng(e.latlng);
                             }
                             updateInfo(feature.properties);
                         });
@@ -221,17 +238,21 @@
                         map.removeLayer(cursorMarker);
                         cursorMarker = null;
                     }
+                    if (label) {
+                        map.removeLayer(label);
+                        label = null;
+                    }
                 });
             })
             .catch(error => console.log(error));
 
         function updateInfo(properties) {
-            document.getElementById('info-linia').textContent = properties.LINIA || '';
-            document.getElementById('info-tram').textContent = properties.TRAM || '';
-            document.getElementById('info-via').textContent = properties.VIA || '';
-            document.getElementById('info-gauge').textContent = properties.gauge || '';
-            document.getElementById('info-maxspeed').textContent = properties.maxspeed || '';
-            document.getElementById('info-voltage').textContent = properties.voltage || '';
+            document.getElementById('info-linia').textContent = 'LINIA: ' + (properties.LINIA || '');
+            document.getElementById('info-tram').textContent = 'TRAM: ' + (properties.TRAM || '');
+            document.getElementById('info-via').textContent = 'VIA: ' + (properties.VIA || '');
+            document.getElementById('info-gauge').textContent = 'Gauge: ' + (properties.gauge || '');
+            document.getElementById('info-maxspeed').textContent = 'Maxspeed: ' + (properties.maxspeed || '');
+            document.getElementById('info-voltage').textContent = 'Voltage: ' + (properties.voltage || '');
         }
     </script>
 </body>
